@@ -1,0 +1,11 @@
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+exclude = [".venv", "migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "DJ"]
+ignore = ["DJ001", "DJ012"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["formy", "config"]
