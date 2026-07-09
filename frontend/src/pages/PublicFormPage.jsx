@@ -2,11 +2,21 @@ import { CheckCircle2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
+// By: Md. Fahim Bin Amin
+//
+// The anonymous, unauthenticated page at /f/:slug that renders a published form and
+// submits responses. Rendered outside Layout since public visitors are not signed in.
+
 import { fetchPublicForm, submitPublicForm } from "../api/forms";
 import { FormRenderer } from "../components/FormRenderer";
 import { HONEYPOT_FIELD } from "../lib/constants";
+import { useTranslation } from "../lib/i18n";
 
+/**
+ * @returns {JSX.Element}
+ */
 export function PublicFormPage() {
+  const { t } = useTranslation();
   const { slug } = useParams();
   const [form, setForm] = useState(null);
   const [values, setValues] = useState({});
@@ -32,7 +42,7 @@ export function PublicFormPage() {
     try {
       const { [HONEYPOT_FIELD]: honeypot, ...data } = values;
       const response = await submitPublicForm(slug, data, honeypot);
-      setNotice(response.message ?? "Submitted successfully.");
+      setNotice(response.message ?? t("msg_submitted_default"));
       setValues({});
       setStatus("submitted");
     } catch (submitError) {
@@ -52,7 +62,7 @@ export function PublicFormPage() {
   if (!form) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-50 text-ink">
-        <p className="text-sm text-slate-600">Loading...</p>
+        <p className="text-sm text-slate-600">{t("msg_loading")}</p>
       </main>
     );
   }

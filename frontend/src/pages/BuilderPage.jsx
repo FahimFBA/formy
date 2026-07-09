@@ -1,3 +1,8 @@
+// By: Md. Fahim Bin Amin
+//
+// Edits a single form's metadata and schema (via SchemaEditor), with a live preview
+// (via FormRenderer) and a raw JSON view of the schema, side by side.
+
 import { Braces, ClipboardList, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -6,12 +11,17 @@ import { getForm, updateForm } from "../api/forms";
 import { FormRenderer } from "../components/FormRenderer";
 import { Layout } from "../components/Layout";
 import { SchemaEditor } from "../components/SchemaEditor";
+import { useTranslation } from "../lib/i18n";
 
 const STATUS_OPTIONS = ["draft", "published", "archived"];
 
+/**
+ * @returns {JSX.Element}
+ */
 export function BuilderPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [form, setForm] = useState(null);
   const [previewValues, setPreviewValues] = useState({});
   const [error, setError] = useState("");
@@ -44,7 +54,7 @@ export function BuilderPage() {
         success_message: form.success_message,
       });
       setForm(saved);
-      setNotice("Saved.");
+      setNotice(t("msg_saved"));
     } catch (saveError) {
       setError(saveError.message);
     } finally {
@@ -63,7 +73,7 @@ export function BuilderPage() {
   if (!form) {
     return (
       <Layout>
-        <p className="text-sm text-slate-600">Loading...</p>
+        <p className="text-sm text-slate-600">{t("msg_loading")}</p>
       </Layout>
     );
   }
@@ -76,14 +86,14 @@ export function BuilderPage() {
           type="button"
           onClick={() => navigate("/dashboard")}
         >
-          Back to dashboard
+          {t("link_back_to_dashboard")}
         </button>
         <Link
           className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
           to={`/builder/${id}/submissions`}
         >
           <ClipboardList size={16} />
-          Submissions
+          {t("nav_submissions")}
         </Link>
       </div>
 
@@ -91,7 +101,7 @@ export function BuilderPage() {
         <section className="space-y-4 rounded-md border border-slate-200 bg-white p-5 shadow-panel">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="space-y-1 text-sm font-medium text-slate-700">
-              Name
+              {t("lbl_name")}
               <input
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                 value={form.name}
@@ -99,7 +109,7 @@ export function BuilderPage() {
               />
             </label>
             <label className="space-y-1 text-sm font-medium text-slate-700">
-              Slug
+              {t("lbl_slug")}
               <input
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                 value={form.slug}
@@ -107,7 +117,7 @@ export function BuilderPage() {
               />
             </label>
             <label className="space-y-1 text-sm font-medium text-slate-700">
-              Status
+              {t("lbl_status")}
               <select
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                 value={form.status}
@@ -115,13 +125,13 @@ export function BuilderPage() {
               >
                 {STATUS_OPTIONS.map((option) => (
                   <option key={option} value={option}>
-                    {option}
+                    {t(`lbl_status_${option}`)}
                   </option>
                 ))}
               </select>
             </label>
             <label className="space-y-1 text-sm font-medium text-slate-700">
-              Success message
+              {t("lbl_success_message")}
               <input
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                 value={form.success_message}
@@ -130,7 +140,7 @@ export function BuilderPage() {
             </label>
           </div>
           <label className="block space-y-1 text-sm font-medium text-slate-700">
-            Description
+            {t("lbl_description")}
             <textarea
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
               value={form.description}
@@ -149,7 +159,7 @@ export function BuilderPage() {
             disabled={saving}
           >
             <Save size={16} />
-            {saving ? "Saving" : "Save"}
+            {saving ? t("btn_saving") : t("btn_save")}
           </button>
         </section>
 
@@ -169,7 +179,7 @@ export function BuilderPage() {
           <section className="rounded-md border border-slate-200 bg-slate-950 p-5 text-slate-100 shadow-panel">
             <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
               <Braces size={16} />
-              Schema
+              {t("lbl_schema")}
             </div>
             <pre className="max-h-[420px] overflow-auto rounded-md bg-slate-900 p-4 text-xs leading-6 text-slate-200">
               {JSON.stringify(form.schema, null, 2)}

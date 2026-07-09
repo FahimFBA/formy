@@ -1,3 +1,8 @@
+// By: Md. Fahim Bin Amin
+//
+// The starter schema used when a new form is created in the builder, and the list of
+// field types the builder and backend both support.
+
 export const defaultSchema = {
   fields: [
     {
@@ -32,4 +37,3 @@ export const defaultSchema = {
 };
 
 export const fieldTypes = ["text", "textarea", "email", "number", "select", "checkbox", "date"];
-

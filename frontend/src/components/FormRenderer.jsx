@@ -1,8 +1,24 @@
+// By: Md. Fahim Bin Amin
+//
+// Renders any supported form schema as an actual HTML form. Used both for the builder's
+// live preview and the public form page, and depends only on a schema plus
+// values/callbacks (no routing or auth), so it stays reusable in embeds too.
+
 import { Send } from "lucide-react";
 
 import { HONEYPOT_FIELD } from "../lib/constants";
+import { useTranslation } from "../lib/i18n";
 
+/**
+ * Renders a single schema field as its matching input control.
+ * @param {object} props
+ * @param {object} props.field - one field definition from the schema (name, type, label, ...)
+ * @param {*} props.value - the field's current value
+ * @param {(name: string, value: *) => void} props.onChange
+ * @returns {JSX.Element}
+ */
 function Field({ field, value, onChange }) {
+  const { t } = useTranslation();
   const baseClass =
     "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100";
 
@@ -30,7 +46,7 @@ function Field({ field, value, onChange }) {
         value={value ?? ""}
         onChange={(event) => onChange(field.name, event.target.value)}
       >
-        <option value="">Select an option</option>
+        <option value="">{t("opt_select_placeholder")}</option>
         {(field.options ?? []).map((option) => (
           <option key={option} value={option}>
             {option}
@@ -51,7 +67,7 @@ function Field({ field, value, onChange }) {
           checked={Boolean(value)}
           onChange={(event) => onChange(field.name, event.target.checked)}
         />
-        <span>{field.placeholder || "Yes"}</span>
+        <span>{field.placeholder || t("lbl_checkbox_yes")}</span>
       </label>
     );
   }
@@ -70,7 +86,20 @@ function Field({ field, value, onChange }) {
   );
 }
 
+/**
+ * @param {object} props
+ * @param {string} props.title
+ * @param {string} [props.description]
+ * @param {object} props.schema - the form schema being rendered ({ fields: [...] })
+ * @param {object} props.values - current field values, keyed by field name
+ * @param {(name: string, value: *) => void} props.onChange
+ * @param {(event: React.FormEvent) => void} props.onSubmit
+ * @param {string} [props.status] - "submitting" disables the submit button
+ * @returns {JSX.Element}
+ */
 export function FormRenderer({ title, description, schema, values, onChange, onSubmit, status }) {
+  const { t } = useTranslation();
+
   return (
     <form className="space-y-5" onSubmit={onSubmit}>
       <div>
@@ -91,7 +120,7 @@ export function FormRenderer({ title, description, schema, values, onChange, onS
       {/* Honeypot: visually hidden (in normal flow, no negative offset) so real users never see
           or fill it; bots that autofill every input trip it and get silently dropped server-side. */}
       <div className="sr-only" aria-hidden="true">
-        <label htmlFor={HONEYPOT_FIELD}>Leave this field empty</label>
+        <label htmlFor={HONEYPOT_FIELD}>{t("lbl_honeypot")}</label>
         <input
           id={HONEYPOT_FIELD}
           name={HONEYPOT_FIELD}
@@ -109,7 +138,7 @@ export function FormRenderer({ title, description, schema, values, onChange, onS
         type="submit"
       >
         <Send size={16} />
-        {status === "submitting" ? "Submitting" : "Submit"}
+        {status === "submitting" ? t("btn_submitting") : t("btn_submit")}
       </button>
     </form>
   );

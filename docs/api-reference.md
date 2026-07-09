@@ -46,16 +46,20 @@ Authenticated. Returns the current user's profile.
   "first_name": "",
   "last_name": "",
   "email": "alice@example.com",
-  "avatar_url": null
+  "avatar_url": null,
+  "language": "en"
 }
 ```
 
-`avatar_url` is an absolute URL to the uploaded avatar, or `null` if none has been set.
+`avatar_url` is an absolute URL to the uploaded avatar, or `null` if none has been set. `language`
+is the account's UI language preference, one of `en` (default), `es`, or `zh`; see
+`label-universe/README.md` for how the frontend uses it.
 
 ### `PATCH /api/auth/profile/`
 
-Authenticated. Update any of `username`, `first_name`, `last_name`, `email`. Send only the fields
-you want to change. Returns the same shape as `GET`.
+Authenticated. Update any of `username`, `first_name`, `last_name`, `email`, `language`. Send only
+the fields you want to change. Returns the same shape as `GET`. `400` with
+`{"language": "Unsupported language."}` if `language` is not `en`, `es`, or `zh`.
 
 ### `POST /api/auth/profile/avatar/`
 

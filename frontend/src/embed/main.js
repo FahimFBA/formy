@@ -1,7 +1,31 @@
+// By: Md. Fahim Bin Amin
+//
+// A separate, dependency-free vanilla-JS entry point (built by vite.embed.config.js,
+// npm run build:embed) that mounts and submits a single published form into any HTML
+// page via <div data-formy-form="slug">, no React runtime shipped. See
+// docs/integration-guide.md for the embed snippet and CORS requirements. Unlike the
+// React app, this widget has no signed-in user to read a language preference from, so
+// its own chrome (loading/submit/error text) always renders in English from
+// label-universe/labels.json; only the form's own schema-defined labels reflect
+// whatever language the form owner authored them in.
+
 import { HONEYPOT_FIELD } from "../lib/constants";
+import rawLabels from "../../../label-universe/labels.json";
+
+/**
+ * @param {string} key - a key from labels.json
+ * @returns {string} that key's English string
+ */
+function label(key) {
+  return rawLabels[key].en;
+}
 
 const STYLE_ID = "formy-embed-styles";
 
+/**
+ * Injects the embed's stylesheet into the host page once, no-op on repeat calls.
+ * @returns {void}
+ */
 function injectStyles() {
   if (document.getElementById(STYLE_ID)) {
     return;
@@ -34,6 +58,13 @@ function injectStyles() {
   document.head.appendChild(style);
 }
 
+/**
+ * Builds the DOM for a single schema field.
+ * @param {object} field - one field definition from the schema (name, type, label, ...)
+ * @param {*} initialValue - the field's current value
+ * @param {(name: string, value: *) => void} onChange
+ * @returns {HTMLDivElement} the field's wrapper element
+ */
 function createField(field, initialValue, onChange) {
   const wrapper = document.createElement("div");
   wrapper.className = "formy-embed-field";
@@ -68,7 +99,7 @@ function createField(field, initialValue, onChange) {
     input.className = "formy-embed-select";
     const blank = document.createElement("option");
     blank.value = "";
-    blank.textContent = "Select an option";
+    blank.textContent = label("opt_select_placeholder");
     input.appendChild(blank);
     (field.options ?? []).forEach((option) => {
       const opt = document.createElement("option");
@@ -97,16 +128,23 @@ function createField(field, initialValue, onChange) {
   return wrapper;
 }
 
+/**
+ * Fetches a published form and mounts a working, submittable version of it into container.
+ * @param {HTMLElement} container - the host page's [data-formy-form] element
+ * @param {string} apiBase - the backend's /api base URL
+ * @param {string} slug - the published form's slug
+ * @returns {Promise<void>}
+ */
 async function mountForm(container, apiBase, slug) {
   injectStyles();
   container.classList.add("formy-embed");
-  container.textContent = "Loading...";
+  container.textContent = label("msg_loading");
 
   let form;
   try {
     const response = await fetch(`${apiBase}/public/forms/${slug}/`);
     if (!response.ok) {
-      throw new Error("Unable to load form.");
+      throw new Error(label("err_unable_to_load_form"));
     }
     form = await response.json();
   } catch (error) {
@@ -142,13 +180,13 @@ async function mountForm(container, apiBase, slug) {
   const button = document.createElement("button");
   button.type = "submit";
   button.className = "formy-embed-button";
-  button.textContent = "Submit";
+  button.textContent = label("btn_submit");
   formEl.appendChild(button);
 
   formEl.addEventListener("submit", async (event) => {
     event.preventDefault();
     button.disabled = true;
-    button.textContent = "Submitting";
+    button.textContent = label("btn_submitting");
     notice.remove();
 
     try {
@@ -160,11 +198,13 @@ async function mountForm(container, apiBase, slug) {
       const payload = await response.json();
 
       if (!response.ok) {
-        throw new Error(Array.isArray(payload.detail) ? payload.detail.join(" ") : payload.detail || "Submission failed.");
+        throw new Error(
+          Array.isArray(payload.detail) ? payload.detail.join(" ") : payload.detail || label("err_submission_failed"),
+        );
       }
 
       notice.className = "formy-embed-notice success";
-      notice.textContent = payload.message ?? "Submitted successfully.";
+      notice.textContent = payload.message ?? label("msg_submitted_default");
       formEl.reset();
       Object.keys(values).forEach((key) => delete values[key]);
     } catch (error) {
@@ -172,7 +212,7 @@ async function mountForm(container, apiBase, slug) {
       notice.textContent = error.message;
     } finally {
       button.disabled = false;
-      button.textContent = "Submit";
+      button.textContent = label("btn_submit");
       container.appendChild(notice);
     }
   });
@@ -180,10 +220,19 @@ async function mountForm(container, apiBase, slug) {
   container.appendChild(formEl);
 }
 
+/**
+ * @param {HTMLElement} el - a [data-formy-form] element
+ * @returns {string} the API base URL to use for that element: its data-formy-api
+ *   attribute, then window.FORMY_API_BASE, then the local dev default
+ */
 function resolveApiBase(el) {
   return el.dataset.formyApi || window.FORMY_API_BASE || "http://localhost:8000/api";
 }
 
+/**
+ * Mounts every [data-formy-form] element on the page.
+ * @returns {void}
+ */
 function init() {
   document.querySelectorAll("[data-formy-form]").forEach((el) => {
     mountForm(el, resolveApiBase(el), el.dataset.formyForm);

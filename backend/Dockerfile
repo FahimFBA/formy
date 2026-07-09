@@ -9,10 +9,13 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends libpq5 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY backend/requirements.txt ./backend/requirements.txt
+RUN pip install --no-cache-dir -r backend/requirements.txt
 
-COPY . .
+COPY backend/ ./backend/
+COPY label-universe/ ./label-universe/
+
+WORKDIR /app/backend
 
 RUN python manage.py collectstatic --noinput
 

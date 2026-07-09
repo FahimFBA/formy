@@ -1,13 +1,23 @@
+// By: Md. Fahim Bin Amin
+//
+// Lists a form's submissions as raw JSON, with CSV/JSON/PDF export buttons that
+// trigger a browser download of the exported file.
+
 import { Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { exportSubmissions, listSubmissions } from "../api/forms";
 import { Layout } from "../components/Layout";
+import { useTranslation } from "../lib/i18n";
 
+/**
+ * @returns {JSX.Element}
+ */
 export function SubmissionsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [submissions, setSubmissions] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -40,11 +50,11 @@ export function SubmissionsPage() {
         type="button"
         onClick={() => navigate(`/builder/${id}`)}
       >
-        Back to builder
+        {t("link_back_to_builder")}
       </button>
 
       <div className="mt-3 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-slate-950">Submissions</h1>
+        <h1 className="text-2xl font-semibold text-slate-950">{t("nav_submissions")}</h1>
         <div className="flex gap-2">
           <button
             className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
@@ -52,7 +62,7 @@ export function SubmissionsPage() {
             onClick={() => handleExport("csv")}
           >
             <Download size={16} />
-            CSV
+            {t("btn_export_csv")}
           </button>
           <button
             className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
@@ -60,7 +70,7 @@ export function SubmissionsPage() {
             onClick={() => handleExport("json")}
           >
             <Download size={16} />
-            JSON
+            {t("btn_export_json")}
           </button>
           <button
             className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
@@ -68,16 +78,16 @@ export function SubmissionsPage() {
             onClick={() => handleExport("pdf")}
           >
             <Download size={16} />
-            PDF
+            {t("btn_export_pdf")}
           </button>
         </div>
       </div>
 
       {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
-      {loading ? <p className="mt-4 text-sm text-slate-600">Loading...</p> : null}
+      {loading ? <p className="mt-4 text-sm text-slate-600">{t("msg_loading")}</p> : null}
 
       {!loading && submissions.length === 0 ? (
-        <p className="mt-4 text-sm text-slate-600">No submissions yet.</p>
+        <p className="mt-4 text-sm text-slate-600">{t("msg_no_submissions")}</p>
       ) : null}
 
       <div className="mt-4 space-y-3">

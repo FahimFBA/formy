@@ -1,3 +1,8 @@
+# By: Md. Fahim Bin Amin
+
+# This file contains the project-level URL root: the Django admin, formy's API under
+# /api/, and a direct media file server for user-uploaded avatars.
+
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path, re_path

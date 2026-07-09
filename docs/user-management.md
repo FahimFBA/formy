@@ -68,10 +68,14 @@ print(token.key)
 ## Updating a user's own profile
 
 Once a user has a token, they can view or change their own `username`, `first_name`, `last_name`,
-`email`, and avatar through `GET`/`PATCH /api/auth/profile/` and `POST`/`DELETE
+`email`, `language`, and avatar through `GET`/`PATCH /api/auth/profile/` and `POST`/`DELETE
 /api/auth/profile/avatar/`, and change their password through `POST
 /api/auth/change-password/`. This is exactly what the frontend's `/profile` page does. Full request
 and response shapes are in `docs/api-reference.md`.
+
+`language` is the account's UI language for the frontend: `en` (default), `es`, or `zh`. It has no
+effect on the Django admin site or on API response text, both of which stay in English; see
+`label-universe/README.md` for what is and is not localized.
 
 There is no endpoint for one user to edit another user's profile. That is an admin-site operation
 (`/admin/auth/user/<id>/change/`), same as any other Django project.

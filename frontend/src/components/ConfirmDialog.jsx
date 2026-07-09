@@ -1,15 +1,37 @@
+// By: Md. Fahim Bin Amin
+//
+// A small reusable confirmation modal used anywhere a destructive action needs
+// confirmation instead of the browser's native confirm(). Backdrop click, Escape, and
+// a Cancel button all dismiss it without confirming.
+
 import { useEffect } from "react";
 
+import { useTranslation } from "../lib/i18n";
+
+/**
+ * @param {object} props
+ * @param {boolean} props.open - whether the dialog is visible
+ * @param {string} props.title
+ * @param {string} [props.description]
+ * @param {string} [props.confirmLabel] - defaults to the translated "Confirm"
+ * @param {string} [props.cancelLabel] - defaults to the translated "Cancel"
+ * @param {boolean} [props.danger] - styles the confirm button as destructive (red)
+ * @param {() => void} props.onConfirm
+ * @param {() => void} props.onCancel
+ * @returns {JSX.Element|null} null when closed
+ */
 export function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel,
+  cancelLabel,
   danger = false,
   onConfirm,
   onCancel,
 }) {
+  const { t } = useTranslation();
+
   useEffect(() => {
     if (!open) {
       return undefined;
@@ -51,7 +73,7 @@ export function ConfirmDialog({
             type="button"
             onClick={onCancel}
           >
-            {cancelLabel}
+            {cancelLabel ?? t("btn_cancel")}
           </button>
           <button
             className={`rounded-md px-4 py-2 text-sm font-semibold text-white transition ${
@@ -61,7 +83,7 @@ export function ConfirmDialog({
             onClick={onConfirm}
             autoFocus
           >
-            {confirmLabel}
+            {confirmLabel ?? t("btn_confirm")}
           </button>
         </div>
       </div>

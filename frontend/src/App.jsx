@@ -1,3 +1,8 @@
+// By: Md. Fahim Bin Amin
+//
+// The route table: public routes (login, /f/:slug) plus authenticated routes wrapped
+// in ProtectedRoute (dashboard, builder, submissions, profile).
+
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { isAuthenticated } from "./api/auth";
@@ -9,6 +14,9 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { PublicFormPage } from "./pages/PublicFormPage";
 import { SubmissionsPage } from "./pages/SubmissionsPage";
 
+/**
+ * @returns {JSX.Element}
+ */
 function App() {
   return (
     <Routes>

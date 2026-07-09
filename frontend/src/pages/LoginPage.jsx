@@ -1,11 +1,21 @@
+// By: Md. Fahim Bin Amin
+//
+// Combined login/register page. Toggles between the two modes in place rather than
+// routing to a separate page, since they share every field except email.
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { login, register } from "../api/auth";
 import { Layout } from "../components/Layout";
+import { useTranslation } from "../lib/i18n";
 
+/**
+ * @returns {JSX.Element}
+ */
 export function LoginPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [mode, setMode] = useState("login");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -36,15 +46,15 @@ export function LoginPage() {
     <Layout>
       <div className="mx-auto max-w-sm rounded-md border border-slate-200 bg-white p-6 shadow-panel">
         <h1 className="text-xl font-semibold text-slate-950">
-          {mode === "login" ? "Log in" : "Create account"}
+          {mode === "login" ? t("lbl_login_heading") : t("lbl_register_heading")}
         </h1>
         <p className="mt-1 text-sm text-slate-600">
-          {mode === "login" ? "Manage your forms and view submissions." : "Start building customizable forms."}
+          {mode === "login" ? t("desc_login") : t("desc_register")}
         </p>
 
         <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
           <label className="block space-y-1 text-sm font-medium text-slate-700">
-            Username
+            {t("lbl_username")}
             <input
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
               value={username}
@@ -55,7 +65,7 @@ export function LoginPage() {
 
           {mode === "register" ? (
             <label className="block space-y-1 text-sm font-medium text-slate-700">
-              Email
+              {t("lbl_email")}
               <input
                 type="email"
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -66,7 +76,7 @@ export function LoginPage() {
           ) : null}
 
           <label className="block space-y-1 text-sm font-medium text-slate-700">
-            Password
+            {t("lbl_password")}
             <input
               type="password"
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -83,7 +93,7 @@ export function LoginPage() {
             type="submit"
             disabled={busy}
           >
-            {mode === "login" ? "Log in" : "Create account"}
+            {mode === "login" ? t("btn_login") : t("btn_create_account")}
           </button>
         </form>
 
@@ -92,7 +102,7 @@ export function LoginPage() {
           type="button"
           onClick={() => setMode(mode === "login" ? "register" : "login")}
         >
-          {mode === "login" ? "Need an account? Register" : "Already have an account? Log in"}
+          {mode === "login" ? t("link_need_account") : t("link_have_account")}
         </button>
       </div>
     </Layout>

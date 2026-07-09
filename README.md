@@ -17,6 +17,7 @@ frontend/
   src/                  React application (pages, components, api client)
   package.json
   tailwind.config.js
+label-universe/         Shared UI copy (en/es/zh) read by both backend and frontend
 docker-compose.yml      Postgres, Redis, backend, and frontend for a full local/production-like stack
 .github/workflows/      CI (Python lint, backend tests, JS lint, frontend build) and automated releases
 ```
@@ -43,6 +44,8 @@ resetting a forgotten password).
 - `docs/integration-guide.md`: the three ways to reuse Formy elsewhere: the embeddable widget, the
   REST API from your own frontend, or vendoring the `formy` Django app into an existing project.
 - `docs/architecture.md`: how the backend and frontend are put together.
+- `label-universe/README.md`: the shared UI copy registry (English, Spanish, Chinese) both sides
+  read from, and how to add a string or a fourth language.
 - `AGENTS.md`: conventions and rules for anyone (human or AI agent) changing this codebase.
 - `CHANGELOG.md`: notable changes per release, and how releases are cut.
 

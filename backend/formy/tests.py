@@ -1,3 +1,10 @@
+# By: Md. Fahim Bin Amin
+
+# This file contains the backend test suite: submission creation/validation rules,
+# auth/registration, profile and password management, avatar upload validation, form
+# ownership scoping, schema versioning, submission export, honeypot handling, and the
+# public submission rate throttle.
+
 import tempfile
 
 from django.contrib.auth import get_user_model
@@ -9,6 +16,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from .constants import HONEYPOT_FIELD
+from .exceptions import FormNotAcceptingSubmissions
 from .models import Form, FormSubmission
 from .services import create_submission
 from .throttling import SubmissionRateThrottle
@@ -50,7 +58,7 @@ class FormSubmissionTests(TestCase):
     def test_unpublished_form_rejects_submission(self):
         form = Form.objects.create(name="Draft", slug="draft", schema=CONTACT_SCHEMA)
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(FormNotAcceptingSubmissions):
             create_submission(form=form, data={"email": "hello@example.com"})
 
 
@@ -97,6 +105,30 @@ class ProfileTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()["username"], "alice")
+
+    def test_default_language_is_english(self):
+        self.client.force_authenticate(self.alice)
+
+        response = self.client.get("/api/auth/profile/")
+
+        self.assertEqual(response.json()["language"], "en")
+
+    def test_can_update_language(self):
+        self.client.force_authenticate(self.alice)
+
+        response = self.client.patch("/api/auth/profile/", {"language": "zh"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["language"], "zh")
+        self.alice.profile.refresh_from_db()
+        self.assertEqual(self.alice.profile.language, "zh")
+
+    def test_rejects_unsupported_language(self):
+        self.client.force_authenticate(self.alice)
+
+        response = self.client.patch("/api/auth/profile/", {"language": "fr"})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_can_update_profile_fields(self):
         self.client.force_authenticate(self.alice)
