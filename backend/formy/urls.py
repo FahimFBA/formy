@@ -1,3 +1,10 @@
+# By: Md. Fahim Bin Amin
+
+# This file contains formy's URL routing, included under /api/ by config/urls.py.
+# FormViewSet's CRUD routes (list/create/retrieve/update/delete plus the submissions
+# and export actions) are registered through the DRF router; every other endpoint is
+# a single-purpose APIView registered explicitly below.
+
 from django.urls import include, path
 from rest_framework.authtoken.views import obtain_auth_token
 from rest_framework.routers import DefaultRouter

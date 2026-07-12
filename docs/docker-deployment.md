@@ -112,5 +112,5 @@ manage.py makemigrations`), copy it out of the container onto the host before re
 rebuild throws it away:
 
 ```powershell
-docker cp formy-backend-1:/app/formy/migrations/000X_your_migration.py backend/formy/migrations/
+docker cp formy-backend-1:/app/backend/formy/migrations/000X_your_migration.py backend/formy/migrations/
 ```

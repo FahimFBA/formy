@@ -1,3 +1,9 @@
+# By: Md. Fahim Bin Amin
+
+# This file contains the Django settings for the config project. Values that differ
+# between local development, Docker, and production are read from the environment
+# (see .env.example), with safe local-dev defaults where possible.
+
 import os
 from pathlib import Path
 
@@ -5,6 +11,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 def load_env_file(path: Path) -> None:
+    """
+    Loads KEY=VALUE pairs from a .env file into os.environ, without overwriting values
+    already set in the real environment. A no-op if path does not exist, so Docker and
+    production (which set real environment variables) are unaffected.
+    :param path: path to the .env file to load
+    """
     if not path.exists():
         return
 
@@ -20,6 +32,12 @@ load_env_file(BASE_DIR / ".env")
 
 
 def env_bool(name: str, default: bool = False) -> bool:
+    """
+    :param name: environment variable name
+    :param default: (bool) value to use if the variable is unset
+    :return: (bool) True if the variable is set to "1", "true", "yes", or "on"
+        (case-insensitive), False for any other set value, default if unset
+    """
     value = os.environ.get(name)
     if value is None:
         return default
@@ -27,6 +45,12 @@ def env_bool(name: str, default: bool = False) -> bool:
 
 
 def env_list(name: str, default: str = "") -> list[str]:
+    """
+    :param name: environment variable name
+    :param default: (str) comma-separated fallback used if the variable is unset
+    :return: (list of str) the variable's value split on commas, with items trimmed
+        and empty items dropped
+    """
     raw_value = os.environ.get(name, default)
     return [item.strip() for item in raw_value.split(",") if item.strip()]
 

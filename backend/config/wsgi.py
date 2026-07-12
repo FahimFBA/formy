@@ -1,4 +1,7 @@
-"""WSGI config for the Formy project."""
+# By: Md. Fahim Bin Amin
+
+# This file contains the WSGI entry point for the config project, used by gunicorn.
+
 import os
 
 from django.core.wsgi import get_wsgi_application

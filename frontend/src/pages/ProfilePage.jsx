@@ -1,16 +1,28 @@
+// By: Md. Fahim Bin Amin
+//
+// Account settings page: profile details (including UI language), avatar
+// upload/removal, and password change, each with its own independent
+// loading/error/success state since they save separately.
+
 import { UserRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { changePassword, deleteAvatar, getProfile, updateProfile, uploadAvatar } from "../api/auth";
 import { Layout } from "../components/Layout";
+import { SUPPORTED_LANGUAGES, useTranslation } from "../lib/i18n";
 
+/**
+ * @returns {JSX.Element}
+ */
 export function ProfilePage() {
+  const { t, setLanguage } = useTranslation();
   const [profile, setProfile] = useState({
     username: "",
     first_name: "",
     last_name: "",
     email: "",
     avatar_url: null,
+    language: "en",
   });
   const [loading, setLoading] = useState(true);
   const [profileError, setProfileError] = useState("");
@@ -64,6 +76,11 @@ export function ProfilePage() {
     }
   }
 
+  function handleLanguageChange(nextLanguage) {
+    setProfile({ ...profile, language: nextLanguage });
+    setLanguage(nextLanguage);
+  }
+
   async function handleProfileSubmit(event) {
     event.preventDefault();
     setProfileError("");
@@ -72,7 +89,8 @@ export function ProfilePage() {
     try {
       const updated = await updateProfile(profile);
       setProfile(updated);
-      setProfileSuccess("Profile updated.");
+      setLanguage(updated.language);
+      setProfileSuccess(t("msg_profile_updated"));
     } catch (error) {
       setProfileError(error.message);
     } finally {
@@ -86,7 +104,7 @@ export function ProfilePage() {
     setPasswordSuccess("");
 
     if (passwords.newPassword !== passwords.confirmPassword) {
-      setPasswordError("New password and confirmation do not match.");
+      setPasswordError(t("err_password_mismatch"));
       return;
     }
 
@@ -94,7 +112,7 @@ export function ProfilePage() {
     try {
       await changePassword(passwords.oldPassword, passwords.newPassword);
       setPasswords({ oldPassword: "", newPassword: "", confirmPassword: "" });
-      setPasswordSuccess("Password changed.");
+      setPasswordSuccess(t("msg_password_changed"));
     } catch (error) {
       setPasswordError(error.message);
     } finally {
@@ -105,14 +123,14 @@ export function ProfilePage() {
   if (loading) {
     return (
       <Layout>
-        <p className="text-sm text-slate-600">Loading...</p>
+        <p className="text-sm text-slate-600">{t("msg_loading")}</p>
       </Layout>
     );
   }
 
   return (
     <Layout>
-      <h1 className="text-2xl font-semibold text-slate-950">Profile settings</h1>
+      <h1 className="text-2xl font-semibold text-slate-950">{t("title_profile_settings")}</h1>
 
       <div className="mt-6 flex max-w-xl items-center gap-4 rounded-md border border-slate-200 bg-white p-6 shadow-panel">
         {profile.avatar_url ? (
@@ -135,7 +153,7 @@ export function ProfilePage() {
               disabled={savingAvatar}
               onClick={() => avatarInputRef.current?.click()}
             >
-              {savingAvatar ? "Saving..." : "Change photo"}
+              {savingAvatar ? t("btn_saving_dots") : t("btn_change_photo")}
             </button>
             {profile.avatar_url ? (
               <button
@@ -144,7 +162,7 @@ export function ProfilePage() {
                 disabled={savingAvatar}
                 onClick={handleAvatarRemove}
               >
-                Remove
+                {t("btn_remove")}
               </button>
             ) : null}
           </div>
@@ -155,7 +173,7 @@ export function ProfilePage() {
             className="hidden"
             onChange={handleAvatarChange}
           />
-          <p className="mt-2 text-xs text-slate-500">JPG, PNG, or GIF. Up to 5MB.</p>
+          <p className="mt-2 text-xs text-slate-500">{t("hint_avatar_formats")}</p>
           {avatarError ? <p className="mt-2 text-sm text-red-700">{avatarError}</p> : null}
         </div>
       </div>
@@ -164,11 +182,11 @@ export function ProfilePage() {
         onSubmit={handleProfileSubmit}
         className="mt-6 max-w-xl space-y-4 rounded-md border border-slate-200 bg-white p-6 shadow-panel"
       >
-        <h2 className="text-lg font-semibold text-slate-950">Account details</h2>
+        <h2 className="text-lg font-semibold text-slate-950">{t("lbl_account_details")}</h2>
 
         <div>
           <label className="block text-sm font-medium text-slate-700" htmlFor="username">
-            Username
+            {t("lbl_username")}
           </label>
           <input
             id="username"
@@ -181,7 +199,7 @@ export function ProfilePage() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700" htmlFor="first_name">
-              First name
+              {t("lbl_first_name")}
             </label>
             <input
               id="first_name"
@@ -192,7 +210,7 @@ export function ProfilePage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700" htmlFor="last_name">
-              Last name
+              {t("lbl_last_name")}
             </label>
             <input
               id="last_name"
@@ -205,7 +223,7 @@ export function ProfilePage() {
 
         <div>
           <label className="block text-sm font-medium text-slate-700" htmlFor="email">
-            Email
+            {t("lbl_email")}
           </label>
           <input
             id="email"
@@ -216,6 +234,24 @@ export function ProfilePage() {
           />
         </div>
 
+        <div>
+          <label className="block text-sm font-medium text-slate-700" htmlFor="language">
+            {t("lbl_language")}
+          </label>
+          <select
+            id="language"
+            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            value={profile.language}
+            onChange={(event) => handleLanguageChange(event.target.value)}
+          >
+            {SUPPORTED_LANGUAGES.map((code) => (
+              <option key={code} value={code}>
+                {t(`lbl_language_${code}`)}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {profileError ? <p className="text-sm text-red-700">{profileError}</p> : null}
         {profileSuccess ? <p className="text-sm text-green-700">{profileSuccess}</p> : null}
 
@@ -224,7 +260,7 @@ export function ProfilePage() {
           type="submit"
           disabled={savingProfile}
         >
-          {savingProfile ? "Saving..." : "Save changes"}
+          {savingProfile ? t("btn_saving_dots") : t("btn_save_changes")}
         </button>
       </form>
 
@@ -232,11 +268,11 @@ export function ProfilePage() {
         onSubmit={handlePasswordSubmit}
         className="mt-6 max-w-xl space-y-4 rounded-md border border-slate-200 bg-white p-6 shadow-panel"
       >
-        <h2 className="text-lg font-semibold text-slate-950">Change password</h2>
+        <h2 className="text-lg font-semibold text-slate-950">{t("lbl_change_password_heading")}</h2>
 
         <div>
           <label className="block text-sm font-medium text-slate-700" htmlFor="old_password">
-            Current password
+            {t("lbl_current_password")}
           </label>
           <input
             id="old_password"
@@ -249,7 +285,7 @@ export function ProfilePage() {
 
         <div>
           <label className="block text-sm font-medium text-slate-700" htmlFor="new_password">
-            New password
+            {t("lbl_new_password")}
           </label>
           <input
             id="new_password"
@@ -262,7 +298,7 @@ export function ProfilePage() {
 
         <div>
           <label className="block text-sm font-medium text-slate-700" htmlFor="confirm_password">
-            Confirm new password
+            {t("lbl_confirm_new_password")}
           </label>
           <input
             id="confirm_password"
@@ -281,7 +317,7 @@ export function ProfilePage() {
           type="submit"
           disabled={savingPassword}
         >
-          {savingPassword ? "Saving..." : "Update password"}
+          {savingPassword ? t("btn_saving_dots") : t("btn_update_password")}
         </button>
       </form>
     </Layout>

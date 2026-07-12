@@ -1,8 +1,19 @@
+// By: Md. Fahim Bin Amin
+//
+// Edits a form's schema: add/remove/reorder fields (drag-and-drop) and edit each
+// field's label, type, name, placeholder, required flag, and select options.
+
 import { GripVertical, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { fieldTypes } from "../lib/defaultSchema";
+import { useTranslation } from "../lib/i18n";
 
+/**
+ * @param {string} label - a field's human-readable label
+ * @returns {string} a slug-like field name derived from label (lowercased, non-alphanumeric
+ *   runs collapsed to underscores, leading/trailing underscores trimmed)
+ */
 function toFieldName(label) {
   return label
     .toLowerCase()
@@ -10,7 +21,14 @@ function toFieldName(label) {
     .replace(/^_+|_+$/g, "");
 }
 
+/**
+ * @param {object} props
+ * @param {object} props.schema - the schema being edited ({ fields: [...] })
+ * @param {(schema: object) => void} props.onChange - called with the full updated schema
+ * @returns {JSX.Element}
+ */
 export function SchemaEditor({ schema, onChange }) {
+  const { t } = useTranslation();
   const fields = schema.fields ?? [];
   const [dragIndex, setDragIndex] = useState(null);
   const [dropIndex, setDropIndex] = useState(null);
@@ -38,7 +56,7 @@ export function SchemaEditor({ schema, onChange }) {
         ...fields,
         {
           name: `field_${fields.length + 1}`,
-          label: "New field",
+          label: t("lbl_new_field_default"),
           type: "text",
           required: false,
           placeholder: "",
@@ -71,10 +89,8 @@ export function SchemaEditor({ schema, onChange }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-slate-950">Builder</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Compose reusable fields from a portable JSON schema. Drag the handle to reorder.
-          </p>
+          <h2 className="text-xl font-semibold text-slate-950">{t("lbl_schema")}</h2>
+          <p className="mt-1 text-sm text-slate-600">{t("desc_builder")}</p>
         </div>
         <button
           className="inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
@@ -82,7 +98,7 @@ export function SchemaEditor({ schema, onChange }) {
           onClick={addField}
         >
           <Plus size={16} />
-          Add
+          {t("btn_add")}
         </button>
       </div>
 
@@ -113,19 +129,19 @@ export function SchemaEditor({ schema, onChange }) {
                   setDropIndex(null);
                 }}
                 className="cursor-grab touch-none rounded-md border border-slate-200 p-1 text-slate-500 hover:bg-slate-50 active:cursor-grabbing"
-                title="Drag to reorder"
-                aria-label="Drag to reorder field"
+                title={t("title_drag_reorder")}
+                aria-label={t("title_drag_reorder")}
               >
                 <GripVertical size={16} />
               </button>
               <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                Field {index + 1}
+                {t("lbl_field_n", { n: index + 1 })}
               </span>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1 text-sm font-medium text-slate-700">
-                Label
+                {t("lbl_label")}
                 <input
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                   value={field.label}
@@ -133,7 +149,7 @@ export function SchemaEditor({ schema, onChange }) {
                 />
               </label>
               <label className="space-y-1 text-sm font-medium text-slate-700">
-                Type
+                {t("lbl_type")}
                 <select
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                   value={field.type}
@@ -141,13 +157,13 @@ export function SchemaEditor({ schema, onChange }) {
                 >
                   {fieldTypes.map((type) => (
                     <option key={type} value={type}>
-                      {type}
+                      {t(`lbl_field_type_${type}`)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="space-y-1 text-sm font-medium text-slate-700">
-                Name
+                {t("lbl_name")}
                 <input
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                   value={field.name}
@@ -155,7 +171,7 @@ export function SchemaEditor({ schema, onChange }) {
                 />
               </label>
               <label className="space-y-1 text-sm font-medium text-slate-700">
-                Placeholder
+                {t("lbl_placeholder")}
                 <input
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                   value={field.placeholder ?? ""}
@@ -166,7 +182,7 @@ export function SchemaEditor({ schema, onChange }) {
 
             {field.type === "select" ? (
               <label className="mt-3 block space-y-1 text-sm font-medium text-slate-700">
-                Options
+                {t("lbl_options")}
                 <input
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                   value={(field.options ?? []).join(", ")}
@@ -190,12 +206,12 @@ export function SchemaEditor({ schema, onChange }) {
                   checked={Boolean(field.required)}
                   onChange={(event) => updateField(index, { required: event.target.checked })}
                 />
-                Required
+                {t("lbl_required")}
               </label>
               <button
                 className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-red-200 text-red-700 transition hover:bg-red-50"
                 type="button"
-                title="Remove field"
+                title={t("title_remove_field")}
                 onClick={() => removeField(index)}
               >
                 <Trash2 size={16} />
