@@ -180,22 +180,69 @@ export function SchemaEditor({ schema, onChange }) {
               </label>
             </div>
 
-            {field.type === "select" ? (
-              <label className="mt-3 block space-y-1 text-sm font-medium text-slate-700">
-                {t("lbl_options")}
-                <input
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                  value={(field.options ?? []).join(", ")}
-                  onChange={(event) =>
-                    updateField(index, {
-                      options: event.target.value
-                        .split(",")
-                        .map((option) => option.trim())
-                        .filter(Boolean),
-                    })
-                  }
-                />
-              </label>
+            {field.type === "select" || field.type === "multi_select" ? (
+              <div className="mt-3 space-y-2">
+                <span className="block text-sm font-medium text-slate-700">{t("lbl_options")}</span>
+                {(field.options ?? []).map((option, optionIndex) => (
+                  <div key={optionIndex} className="flex items-center gap-2">
+                    <input
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      value={option}
+                      onChange={(event) => {
+                        const nextOptions = [...(field.options ?? [])];
+                        nextOptions[optionIndex] = event.target.value;
+                        updateField(index, { options: nextOptions });
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-md border border-red-200 text-red-700 transition hover:bg-red-50"
+                      title={t("title_remove_option")}
+                      onClick={() =>
+                        updateField(index, {
+                          options: (field.options ?? []).filter((_, i) => i !== optionIndex),
+                        })
+                      }
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                  onClick={() => updateField(index, { options: [...(field.options ?? []), ""] })}
+                >
+                  <Plus size={14} />
+                  {t("btn_add_option")}
+                </button>
+              </div>
+            ) : null}
+
+            {field.type === "file" ? (
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1 text-sm font-medium text-slate-700">
+                  {t("lbl_accepted_file_types")}
+                  <input
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    placeholder=".pdf, .docx, .png"
+                    value={field.accept ?? ""}
+                    onChange={(event) => updateField(index, { accept: event.target.value })}
+                  />
+                </label>
+                <label className="space-y-1 text-sm font-medium text-slate-700">
+                  {t("lbl_max_files")}
+                  <input
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    type="number"
+                    min={1}
+                    value={field.max_files ?? 1}
+                    onChange={(event) =>
+                      updateField(index, { max_files: Math.max(1, Number(event.target.value) || 1) })
+                    }
+                  />
+                </label>
+              </div>
             ) : null}
 
             <div className="mt-4 flex items-center justify-between gap-3">

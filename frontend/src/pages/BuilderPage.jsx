@@ -4,10 +4,10 @@
 // (via FormRenderer) and a raw JSON view of the schema, side by side.
 
 import { Braces, ClipboardList, Save } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
-import { getForm, updateForm } from "../api/forms";
+import { deleteFormBanner, getForm, updateForm, uploadFormBanner } from "../api/forms";
 import { FormRenderer } from "../components/FormRenderer";
 import { Layout } from "../components/Layout";
 import { SchemaEditor } from "../components/SchemaEditor";
@@ -27,6 +27,10 @@ export function BuilderPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const [bannerError, setBannerError] = useState("");
+  const [savingBanner, setSavingBanner] = useState(false);
+  const bannerInputRef = useRef(null);
 
   useEffect(() => {
     getForm(id)
@@ -52,6 +56,8 @@ export function BuilderPage() {
         status: form.status,
         schema: form.schema,
         success_message: form.success_message,
+        header_text: form.header_text,
+        footer_text: form.footer_text,
       });
       setForm(saved);
       setNotice(t("msg_saved"));
@@ -59,6 +65,37 @@ export function BuilderPage() {
       setError(saveError.message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleBannerChange(event) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    setBannerError("");
+    setSavingBanner(true);
+    try {
+      const updated = await uploadFormBanner(id, file);
+      setForm((current) => ({ ...current, ...updated }));
+    } catch (uploadError) {
+      setBannerError(uploadError.message);
+    } finally {
+      setSavingBanner(false);
+      event.target.value = "";
+    }
+  }
+
+  async function handleBannerRemove() {
+    setBannerError("");
+    setSavingBanner(true);
+    try {
+      const updated = await deleteFormBanner(id);
+      setForm((current) => ({ ...current, ...updated }));
+    } catch (removeError) {
+      setBannerError(removeError.message);
+    } finally {
+      setSavingBanner(false);
     }
   }
 
@@ -145,6 +182,68 @@ export function BuilderPage() {
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
               value={form.description}
               onChange={(event) => updateField({ description: event.target.value })}
+            />
+          </label>
+
+          <div className="space-y-2 rounded-md border border-slate-200 p-3">
+            <span className="text-sm font-medium text-slate-700">{t("lbl_banner_image")}</span>
+            <div className="flex items-center gap-3">
+              {form.banner_image_url ? (
+                <img
+                  src={form.banner_image_url}
+                  alt=""
+                  className="h-16 w-28 rounded-md border border-slate-200 object-cover"
+                />
+              ) : null}
+              <div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 disabled:opacity-60"
+                    disabled={savingBanner}
+                    onClick={() => bannerInputRef.current?.click()}
+                  >
+                    {savingBanner ? t("btn_saving_dots") : t("btn_upload_banner")}
+                  </button>
+                  {form.banner_image_url ? (
+                    <button
+                      type="button"
+                      className="rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+                      disabled={savingBanner}
+                      onClick={handleBannerRemove}
+                    >
+                      {t("btn_remove_banner")}
+                    </button>
+                  ) : null}
+                </div>
+                <input
+                  ref={bannerInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleBannerChange}
+                />
+                <p className="mt-1 text-xs text-slate-500">{t("hint_banner_formats")}</p>
+              </div>
+            </div>
+            {bannerError ? <p className="text-sm text-red-700">{bannerError}</p> : null}
+          </div>
+
+          <label className="block space-y-1 text-sm font-medium text-slate-700">
+            {t("lbl_header_text")}
+            <input
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              value={form.header_text ?? ""}
+              onChange={(event) => updateField({ header_text: event.target.value })}
+            />
+          </label>
+
+          <label className="block space-y-1 text-sm font-medium text-slate-700">
+            {t("lbl_footer_text")}
+            <textarea
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              value={form.footer_text ?? ""}
+              onChange={(event) => updateField({ footer_text: event.target.value })}
             />
           </label>
 

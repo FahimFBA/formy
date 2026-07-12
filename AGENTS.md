@@ -51,6 +51,14 @@ general before assuming how something works.
   relative path from source to `label-universe/` matches on disk and in the container; do not
   revert to a flat `/app` layout for one service without the other, or the label loader's relative
   path breaks.
+- Adding a new form field `type` touches five places, all of which must move together:
+  `backend/formy/models.py` (`ALLOWED_FIELD_TYPES`, plus `OPTIONS_FIELD_TYPES` if it needs an
+  `options` list, plus a required-value rule in `validate_submission_data` if "empty" isn't just
+  `None`/`""`/`[]`), `frontend/src/lib/defaultSchema.js` (`fieldTypes`), `SchemaEditor.jsx` (any
+  type-specific editing UI), `FormRenderer.jsx` (the actual input control), and
+  `frontend/src/embed/main.js` (`createField`, since the embed widget cannot import React
+  components and re-renders the same field types by hand). Forgetting the embed widget means any
+  published form using the new type silently breaks when embedded elsewhere.
 
 ## Before committing anything
 

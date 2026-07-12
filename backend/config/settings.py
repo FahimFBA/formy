@@ -163,6 +163,12 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 # 5MB cap on user-uploaded avatars, enforced in AvatarUploadView before the file touches disk.
 MAX_AVATAR_UPLOAD_BYTES = 5 * 1024 * 1024
+# 5MB cap on a form's banner image, enforced in FormViewSet.banner before the file touches disk.
+MAX_BANNER_UPLOAD_BYTES = 5 * 1024 * 1024
+# 10MB cap per submission attachment, enforced in services.create_submission before the file
+# touches disk. Higher than the image caps since attachments are arbitrary user documents, not
+# just images.
+MAX_ATTACHMENT_UPLOAD_BYTES = 10 * 1024 * 1024
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",

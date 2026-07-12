@@ -10,6 +10,7 @@
 // whatever language the form owner authored them in.
 
 import { HONEYPOT_FIELD } from "../lib/constants";
+import countries from "../../../label-universe/countries.json";
 import rawLabels from "../../../label-universe/labels.json";
 
 /**
@@ -51,6 +52,26 @@ function injectStyles() {
       border: none; border-radius: 0.375rem; padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 600; cursor: pointer;
     }
     .formy-embed-button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .formy-embed-file-container { display: flex; flex-direction: column; gap: 0.5rem; }
+    .formy-embed-file-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+      border: 1px solid #cbd5e1; border-radius: 0.375rem; background: #f8fafc; padding: 0.5rem 0.75rem;
+      font-size: 0.875rem; color: #334155;
+    }
+    .formy-embed-file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .formy-embed-file-remove {
+      border: none; background: transparent; color: #94a3b8; cursor: pointer; font-size: 1rem;
+      line-height: 1; padding: 0.25rem; border-radius: 0.25rem;
+    }
+    .formy-embed-file-remove:hover { background: #e2e8f0; color: #b91c1c; }
+    .formy-embed-dropzone {
+      display: flex; flex-direction: column; align-items: center; gap: 0.25rem; cursor: pointer;
+      border: 2px dashed #cbd5e1; border-radius: 0.375rem; background: #f8fafc; padding: 1.25rem 1rem;
+      text-align: center; color: #64748b;
+    }
+    .formy-embed-dropzone:hover { border-color: #1aa879; background: #eefdf7; }
+    .formy-embed-dropzone-title { font-size: 0.875rem; font-weight: 600; color: #334155; }
+    .formy-embed-dropzone-hint { font-size: 0.75rem; color: #64748b; }
     .formy-embed-notice { margin-top: 0.75rem; padding: 0.5rem 0.75rem; border-radius: 0.375rem; font-size: 0.875rem; }
     .formy-embed-notice.success { background: #eefdf7; border: 1px solid #d5f8ea; color: #0d6f52; }
     .formy-embed-notice.error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
@@ -83,11 +104,187 @@ function createField(field, initialValue, onChange) {
     return wrapper;
   }
 
-  const label = document.createElement("label");
-  label.className = "formy-embed-label";
-  label.textContent = field.label + (field.required ? " *" : "");
-  label.setAttribute("for", field.name);
-  wrapper.appendChild(label);
+  if (field.type === "multi_select") {
+    const legend = document.createElement("span");
+    legend.className = "formy-embed-label";
+    legend.textContent = field.label + (field.required ? " *" : "");
+    wrapper.appendChild(legend);
+
+    const selected = Array.isArray(initialValue) ? [...initialValue] : [];
+    (field.options ?? []).forEach((option) => {
+      const row = document.createElement("label");
+      row.className = "formy-embed-checkbox-row";
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.name = field.name;
+      input.value = option;
+      input.checked = selected.includes(option);
+      input.addEventListener("change", () => {
+        if (input.checked) {
+          selected.push(option);
+        } else {
+          selected.splice(selected.indexOf(option), 1);
+        }
+        onChange(field.name, [...selected]);
+      });
+      row.appendChild(input);
+      row.appendChild(document.createTextNode(option));
+      wrapper.appendChild(row);
+    });
+    return wrapper;
+  }
+
+  const labelEl = document.createElement("label");
+  labelEl.className = "formy-embed-label";
+  labelEl.textContent = field.label + (field.required ? " *" : "");
+  labelEl.setAttribute("for", field.name);
+  wrapper.appendChild(labelEl);
+
+  if (field.type === "phone") {
+    const phoneValue = initialValue && typeof initialValue === "object" ? initialValue : {};
+    const row = document.createElement("div");
+    row.style.display = "flex";
+    row.style.flexWrap = "wrap";
+    row.style.gap = "0.5rem";
+
+    const select = document.createElement("select");
+    select.className = "formy-embed-select";
+    select.style.flex = "0 0 auto";
+    select.style.width = "9rem";
+    select.style.minWidth = "0";
+    const blank = document.createElement("option");
+    blank.value = "";
+    blank.textContent = label("opt_select_country_placeholder");
+    select.appendChild(blank);
+    countries.forEach((country) => {
+      const opt = document.createElement("option");
+      opt.value = country.dial_code;
+      opt.textContent = `${country.name.en} (${country.dial_code})`;
+      select.appendChild(opt);
+    });
+    select.value = phoneValue.country_code ?? "";
+    select.addEventListener("change", () => onChange(field.name, { ...phoneValue, country_code: select.value }));
+
+    const number = document.createElement("input");
+    number.type = "tel";
+    number.className = "formy-embed-input";
+    number.style.flex = "1 1 10rem";
+    number.style.minWidth = "0";
+    number.id = field.name;
+    number.name = field.name;
+    if (field.placeholder) {
+      number.placeholder = field.placeholder;
+    }
+    if (field.required) {
+      number.required = true;
+    }
+    number.value = phoneValue.number ?? "";
+    number.addEventListener("input", () => onChange(field.name, { ...phoneValue, number: number.value }));
+
+    row.appendChild(select);
+    row.appendChild(number);
+    wrapper.appendChild(row);
+    return wrapper;
+  }
+
+  if (field.type === "file") {
+    const maxFiles = field.max_files ?? 1;
+    let files = Array.isArray(initialValue) ? [...initialValue] : [];
+
+    const container = document.createElement("div");
+    container.className = "formy-embed-file-container";
+
+    /**
+     * Rebuilds the file rows and dropzone from the current `files` array. Called on
+     * mount and after every add/remove, since this widget has no framework to diff
+     * the DOM for it.
+     * @returns {void}
+     */
+    function renderFiles() {
+      container.innerHTML = "";
+
+      files.forEach((file, index) => {
+        const row = document.createElement("div");
+        row.className = "formy-embed-file-row";
+
+        const name = document.createElement("span");
+        name.className = "formy-embed-file-name";
+        name.textContent = `\u{1F4CE} ${file.name}`;
+        row.appendChild(name);
+
+        const removeButton = document.createElement("button");
+        removeButton.type = "button";
+        removeButton.className = "formy-embed-file-remove";
+        removeButton.textContent = "×";
+        removeButton.setAttribute("aria-label", label("btn_remove"));
+        removeButton.addEventListener("click", () => {
+          files = files.filter((_, fileIndex) => fileIndex !== index);
+          onChange(field.name, files);
+          renderFiles();
+        });
+        row.appendChild(removeButton);
+
+        container.appendChild(row);
+      });
+
+      if (files.length >= maxFiles) {
+        return;
+      }
+
+      const dropzone = document.createElement("label");
+      dropzone.className = "formy-embed-dropzone";
+      dropzone.setAttribute("for", field.name);
+      dropzone.innerHTML =
+        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+        'stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/>' +
+        '<path d="M5 21h14"/></svg>';
+
+      const title = document.createElement("span");
+      title.className = "formy-embed-dropzone-title";
+      title.textContent = label("btn_choose_file");
+      dropzone.appendChild(title);
+
+      const hint = document.createElement("span");
+      hint.className = "formy-embed-dropzone-hint";
+      hint.textContent = field.placeholder || label("hint_file_dropzone");
+      dropzone.appendChild(hint);
+
+      const input = document.createElement("input");
+      input.type = "file";
+      input.style.display = "none";
+      input.id = field.name;
+      input.name = field.name;
+      if (field.accept) {
+        input.accept = field.accept;
+      }
+      if (maxFiles > 1) {
+        input.multiple = true;
+      }
+      if (field.required && files.length === 0) {
+        input.required = true;
+      }
+      input.addEventListener("change", () => {
+        files = [...files, ...Array.from(input.files ?? [])].slice(0, maxFiles);
+        onChange(field.name, files);
+        renderFiles();
+      });
+      dropzone.appendChild(input);
+
+      dropzone.addEventListener("dragover", (event) => event.preventDefault());
+      dropzone.addEventListener("drop", (event) => {
+        event.preventDefault();
+        files = [...files, ...Array.from(event.dataTransfer.files ?? [])].slice(0, maxFiles);
+        onChange(field.name, files);
+        renderFiles();
+      });
+
+      container.appendChild(dropzone);
+    }
+
+    renderFiles();
+    wrapper.appendChild(container);
+    return wrapper;
+  }
 
   let input;
   if (field.type === "textarea") {
@@ -190,11 +387,30 @@ async function mountForm(container, apiBase, slug) {
     notice.remove();
 
     try {
-      const response = await fetch(`${apiBase}/public/forms/${slug}/submit/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data: values, [HONEYPOT_FIELD]: hpInput.value }),
-      });
+      const isFileValue = (value) =>
+        value instanceof File || (Array.isArray(value) && value.length > 0 && value.every((item) => item instanceof File));
+      const fileFieldNames = Object.entries(values)
+        .filter(([, value]) => isFileValue(value))
+        .map(([name]) => name);
+
+      let response;
+      if (fileFieldNames.length === 0) {
+        response = await fetch(`${apiBase}/public/forms/${slug}/submit/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: values, [HONEYPOT_FIELD]: hpInput.value }),
+        });
+      } else {
+        const jsonData = Object.fromEntries(Object.entries(values).filter(([name]) => !fileFieldNames.includes(name)));
+        const formData = new FormData();
+        formData.append("data", JSON.stringify(jsonData));
+        formData.append(HONEYPOT_FIELD, hpInput.value);
+        fileFieldNames.forEach((name) => {
+          const value = values[name];
+          (Array.isArray(value) ? value : [value]).forEach((file) => formData.append(name, file));
+        });
+        response = await fetch(`${apiBase}/public/forms/${slug}/submit/`, { method: "POST", body: formData });
+      }
       const payload = await response.json();
 
       if (!response.ok) {

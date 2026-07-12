@@ -1,9 +1,10 @@
 # By: Md. Fahim Bin Amin
 
-# This file contains the backend test suite: submission creation/validation rules,
-# auth/registration, profile and password management, avatar upload validation, form
-# ownership scoping, schema versioning, submission export, honeypot handling, and the
-# public submission rate throttle.
+# This file contains the backend test suite: submission creation/validation rules
+# (including multi_select/phone/file fields and submission attachments), auth/
+# registration, profile and password management, avatar/banner upload validation,
+# form ownership scoping, schema versioning, submission export, honeypot handling,
+# and the public submission rate throttle.
 
 import tempfile
 
@@ -12,18 +13,40 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
+from django.utils.datastructures import MultiValueDict
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from .constants import HONEYPOT_FIELD
-from .exceptions import FormNotAcceptingSubmissions
-from .models import Form, FormSubmission
+from .exceptions import (
+    AttachmentTooLarge,
+    FormNotAcceptingSubmissions,
+    InvalidAttachmentType,
+    TooManyAttachments,
+)
+from .models import Form, FormSubmission, SubmissionAttachment
 from .services import create_submission
 from .throttling import SubmissionRateThrottle
 
 User = get_user_model()
 
 CONTACT_SCHEMA = {"fields": [{"name": "email", "label": "Email", "type": "email", "required": True}]}
+
+MULTI_SELECT_SCHEMA = {
+    "fields": [
+        {
+            "name": "interests",
+            "label": "Interests",
+            "type": "multi_select",
+            "required": True,
+            "options": ["Product", "Support", "Sales"],
+        }
+    ]
+}
+
+PHONE_SCHEMA = {"fields": [{"name": "mobile", "label": "Mobile", "type": "phone", "required": True}]}
+
+FILE_SCHEMA = {"fields": [{"name": "resume", "label": "Resume", "type": "file", "required": True}]}
 
 ONE_PIXEL_GIF = (
     b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!\xf9\x04\x01\x00\x00\x00\x00,"
@@ -60,6 +83,237 @@ class FormSubmissionTests(TestCase):
 
         with self.assertRaises(FormNotAcceptingSubmissions):
             create_submission(form=form, data={"email": "hello@example.com"})
+
+    def test_multi_select_schema_requires_options(self):
+        bad_schema = {"fields": [{"name": "interests", "label": "Interests", "type": "multi_select"}]}
+        form = Form(name="Bad", slug="bad", schema=bad_schema)
+
+        with self.assertRaises(ValidationError):
+            form.full_clean()
+
+    def test_multi_select_accepts_list_of_selected_options(self):
+        form = Form.objects.create(
+            name="Contact", slug="contact", status=Form.Status.PUBLISHED, schema=MULTI_SELECT_SCHEMA
+        )
+
+        submission = create_submission(form=form, data={"interests": ["Product", "Sales"]})
+
+        self.assertEqual(submission.data["interests"], ["Product", "Sales"])
+
+    def test_multi_select_rejects_empty_list_when_required(self):
+        form = Form.objects.create(
+            name="Contact", slug="contact", status=Form.Status.PUBLISHED, schema=MULTI_SELECT_SCHEMA
+        )
+
+        with self.assertRaises(ValidationError):
+            create_submission(form=form, data={"interests": []})
+
+    def test_phone_accepts_country_code_and_number(self):
+        form = Form.objects.create(name="Contact", slug="contact", status=Form.Status.PUBLISHED, schema=PHONE_SCHEMA)
+
+        submission = create_submission(
+            form=form, data={"mobile": {"country_code": "+880", "number": "1234567890"}}
+        )
+
+        self.assertEqual(submission.data["mobile"]["number"], "1234567890")
+
+    def test_phone_rejects_missing_number_when_required(self):
+        form = Form.objects.create(name="Contact", slug="contact", status=Form.Status.PUBLISHED, schema=PHONE_SCHEMA)
+
+        with self.assertRaises(ValidationError):
+            create_submission(form=form, data={"mobile": {"country_code": "+880", "number": ""}})
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class SubmissionAttachmentTests(APITestCase):
+    def setUp(self):
+        self.alice = User.objects.create_user(username="alice", password="s3cret-pass")
+        self.bob = User.objects.create_user(username="bob", password="s3cret-pass")
+        self.form = Form.objects.create(
+            owner=self.alice, name="Jobs", slug="jobs", status=Form.Status.PUBLISHED, schema=FILE_SCHEMA
+        )
+
+    def test_create_submission_stores_attachment_and_reference(self):
+        resume = SimpleUploadedFile("resume.pdf", b"%PDF-1.4 fake resume", content_type="application/pdf")
+
+        submission = create_submission(form=self.form, data={}, files={"resume": resume})
+
+        self.assertEqual(SubmissionAttachment.objects.count(), 1)
+        attachment = SubmissionAttachment.objects.get()
+        self.assertEqual(attachment.submission, submission)
+        self.assertEqual(attachment.original_filename, "resume.pdf")
+        self.assertEqual(submission.data["resume"], [{"attachment_id": str(attachment.id), "filename": "resume.pdf"}])
+
+    def test_required_file_field_rejects_submission_with_no_file(self):
+        with self.assertRaises(ValidationError):
+            create_submission(form=self.form, data={}, files={})
+
+    def test_oversized_attachment_is_rejected(self):
+        oversized = SimpleUploadedFile("big.bin", bytes(11 * 1024 * 1024), content_type="application/octet-stream")
+
+        with self.assertRaises(AttachmentTooLarge):
+            create_submission(form=self.form, data={}, files={"resume": oversized})
+
+        self.assertEqual(SubmissionAttachment.objects.count(), 0)
+
+    def test_accept_rejects_disallowed_extension(self):
+        schema = {
+            "fields": [
+                {"name": "resume", "label": "Resume", "type": "file", "required": True, "accept": ".pdf,.docx"}
+            ]
+        }
+        form = Form.objects.create(
+            owner=self.alice, name="Jobs2", slug="jobs2", status=Form.Status.PUBLISHED, schema=schema
+        )
+        image = SimpleUploadedFile("resume.png", b"not a resume", content_type="image/png")
+
+        with self.assertRaises(InvalidAttachmentType):
+            create_submission(form=form, data={}, files={"resume": image})
+
+    def test_accept_allows_listed_extension(self):
+        schema = {
+            "fields": [
+                {"name": "resume", "label": "Resume", "type": "file", "required": True, "accept": ".pdf,.docx"}
+            ]
+        }
+        form = Form.objects.create(
+            owner=self.alice, name="Jobs3", slug="jobs3", status=Form.Status.PUBLISHED, schema=schema
+        )
+        resume = SimpleUploadedFile("resume.pdf", b"%PDF-1.4 fake resume", content_type="application/pdf")
+
+        submission = create_submission(form=form, data={}, files={"resume": resume})
+
+        self.assertEqual(submission.attachments.count(), 1)
+
+    def test_max_files_rejects_too_many_uploads(self):
+        schema = {
+            "fields": [{"name": "resume", "label": "Resume", "type": "file", "required": True, "max_files": 2}]
+        }
+        form = Form.objects.create(
+            owner=self.alice, name="Jobs4", slug="jobs4", status=Form.Status.PUBLISHED, schema=schema
+        )
+        files = MultiValueDict(
+            {
+                "resume": [
+                    SimpleUploadedFile("a.pdf", b"a", content_type="application/pdf"),
+                    SimpleUploadedFile("b.pdf", b"b", content_type="application/pdf"),
+                    SimpleUploadedFile("c.pdf", b"c", content_type="application/pdf"),
+                ]
+            }
+        )
+
+        with self.assertRaises(TooManyAttachments):
+            create_submission(form=form, data={}, files=files)
+
+    def test_max_files_allows_multiple_uploads_within_limit(self):
+        schema = {
+            "fields": [{"name": "resume", "label": "Resume", "type": "file", "required": True, "max_files": 2}]
+        }
+        form = Form.objects.create(
+            owner=self.alice, name="Jobs5", slug="jobs5", status=Form.Status.PUBLISHED, schema=schema
+        )
+        files = MultiValueDict(
+            {
+                "resume": [
+                    SimpleUploadedFile("a.pdf", b"a", content_type="application/pdf"),
+                    SimpleUploadedFile("b.pdf", b"b", content_type="application/pdf"),
+                ]
+            }
+        )
+
+        submission = create_submission(form=form, data={}, files=files)
+
+        self.assertEqual(submission.attachments.count(), 2)
+        self.assertEqual(len(submission.data["resume"]), 2)
+
+    def test_public_submit_with_file_uses_multipart(self):
+        resume = SimpleUploadedFile("resume.pdf", b"%PDF-1.4 fake resume", content_type="application/pdf")
+
+        response = self.client.post(
+            "/api/public/forms/jobs/submit/",
+            {"data": "{}", "resume": resume},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(SubmissionAttachment.objects.count(), 1)
+
+    def test_owner_can_download_attachment(self):
+        resume = SimpleUploadedFile("resume.pdf", b"%PDF-1.4 fake resume", content_type="application/pdf")
+        submission = create_submission(form=self.form, data={}, files={"resume": resume})
+        attachment = submission.attachments.get()
+        self.client.force_authenticate(self.alice)
+
+        response = self.client.get(f"/api/attachments/{attachment.id}/download/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_other_user_cannot_download_attachment(self):
+        resume = SimpleUploadedFile("resume.pdf", b"%PDF-1.4 fake resume", content_type="application/pdf")
+        submission = create_submission(form=self.form, data={}, files={"resume": resume})
+        attachment = submission.attachments.get()
+        self.client.force_authenticate(self.bob)
+
+        response = self.client.get(f"/api/attachments/{attachment.id}/download/")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_anonymous_cannot_download_attachment(self):
+        resume = SimpleUploadedFile("resume.pdf", b"%PDF-1.4 fake resume", content_type="application/pdf")
+        submission = create_submission(form=self.form, data={}, files={"resume": resume})
+        attachment = submission.attachments.get()
+
+        response = self.client.get(f"/api/attachments/{attachment.id}/download/")
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class FormBannerTests(APITestCase):
+    def setUp(self):
+        self.alice = User.objects.create_user(username="alice", password="s3cret-pass")
+        self.form = Form.objects.create(owner=self.alice, name="Contact", slug="contact", schema=CONTACT_SCHEMA)
+
+    def test_owner_can_upload_banner(self):
+        self.client.force_authenticate(self.alice)
+        banner = SimpleUploadedFile("banner.gif", ONE_PIXEL_GIF, content_type="image/gif")
+
+        response = self.client.post(f"/api/forms/{self.form.id}/banner/", {"banner": banner}, format="multipart")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNotNone(response.json()["banner_image_url"])
+
+    def test_rejects_non_image_banner(self):
+        self.client.force_authenticate(self.alice)
+        bogus = SimpleUploadedFile("banner.gif", b"not an image", content_type="image/gif")
+
+        response = self.client.post(f"/api/forms/{self.form.id}/banner/", {"banner": bogus}, format="multipart")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_owner_can_remove_banner(self):
+        self.client.force_authenticate(self.alice)
+        banner = SimpleUploadedFile("banner.gif", ONE_PIXEL_GIF, content_type="image/gif")
+        self.client.post(f"/api/forms/{self.form.id}/banner/", {"banner": banner}, format="multipart")
+
+        response = self.client.delete(f"/api/forms/{self.form.id}/banner/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.json()["banner_image_url"])
+
+    def test_can_set_header_and_footer_text(self):
+        self.client.force_authenticate(self.alice)
+
+        response = self.client.patch(
+            f"/api/forms/{self.form.id}/",
+            {"header_text": "Welcome", "footer_text": "Thanks for visiting"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.form.refresh_from_db()
+        self.assertEqual(self.form.header_text, "Welcome")
+        self.assertEqual(self.form.footer_text, "Thanks for visiting")
 
 
 class AuthTests(APITestCase):
@@ -484,3 +738,35 @@ class SubmissionExportTests(APITestCase):
         response = self.client.get(f"/api/forms/{self.form.id}/export/")
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class ExportFieldFormattingTests(APITestCase):
+    def setUp(self):
+        self.alice = User.objects.create_user(username="alice", password="s3cret-pass")
+        self.schema = {
+            "fields": [
+                {
+                    "name": "interests",
+                    "label": "Interests",
+                    "type": "multi_select",
+                    "options": ["Product", "Support"],
+                },
+                {"name": "mobile", "label": "Mobile", "type": "phone"},
+            ]
+        }
+        self.form = Form.objects.create(
+            owner=self.alice, name="Contact", slug="contact", status=Form.Status.PUBLISHED, schema=self.schema
+        )
+        create_submission(
+            form=self.form,
+            data={"interests": ["Product", "Support"], "mobile": {"country_code": "+880", "number": "123"}},
+        )
+
+    def test_csv_export_formats_multi_select_and_phone(self):
+        self.client.force_authenticate(self.alice)
+
+        response = self.client.get(f"/api/forms/{self.form.id}/export/")
+
+        body = response.content.decode()
+        self.assertIn("Product, Support", body)
+        self.assertIn("+880 123", body)

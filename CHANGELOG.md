@@ -12,6 +12,42 @@ See `AGENTS.md` for the exact steps.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-12
+
+### Added
+
+- Three new form field types: `multi_select` (checkbox group, stores an array of selected
+  options), `phone` (country code plus number, `{country_code, number}`), and `file` (one or more
+  real uploads, stored as `SubmissionAttachment` rows and referenced from the submission's data as
+  an array of `attachment_id`/`filename` references). `label-universe/countries.json` supplies the
+  `phone` field's country picker (ISO-3166 dial codes, `en`/`es`/`zh` names). `file` fields support
+  an optional `accept` (allowed extensions) and `max_files` (default `1`) schema constraint, both
+  editable from `SchemaEditor` and enforced server side.
+- Attachment downloads: `GET /api/attachments/<id>/download/`, owner-only, linked from each
+  submission's new `attachments` array and surfaced as download buttons on `SubmissionsPage`.
+- Form banner image, header text, and footer text: `POST`/`DELETE /api/forms/<id>/banner/` for the
+  banner (same Pillow-based validation as avatar uploads, via the new shared
+  `services.validate_image_upload`), `header_text`/`footer_text` as plain writable `Form` fields.
+  `BuilderPage` edits all three; the public form page renders them around the form itself.
+- `PublicSubmitView` now accepts `multipart/form-data` (required whenever a form's schema has a
+  `file` field) alongside the existing plain-JSON path.
+
+### Changed
+
+- Submission CSV/PDF export renders `multi_select`, `phone`, and `file` values as readable text
+  (`FormViewSet._field_display_value`) instead of a raw Python dict/list representation.
+- `SchemaEditor`'s options editor for `select`/`multi_select` fields is now an explicit per-option
+  list with its own "Add option" button and a remove button per row, instead of one shared
+  comma-separated text input.
+- The `file` field now renders as a dashed drag-and-drop dropzone (click or drop to add, one row per
+  attached file with its own remove button, matching the picker style Google Forms uses) instead of
+  a bare browser file input, in both `FormRenderer` and the embed widget.
+
+### Fixed
+
+- The `phone` field's country-code select and number input no longer overflow a narrow preview
+  or embed container; the row wraps instead.
+
 ## [0.3.0] - 2026-07-10
 
 ### Added
@@ -73,7 +109,8 @@ See `AGENTS.md` for the exact steps.
 - CI on every pull request: Python lint (ruff), Django test suite, JS lint (eslint), and frontend
   build checks.
 
-[Unreleased]: https://github.com/FahimFBA/formy/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/FahimFBA/formy/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/FahimFBA/formy/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/FahimFBA/formy/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/FahimFBA/formy/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/FahimFBA/formy/releases/tag/v0.1.0

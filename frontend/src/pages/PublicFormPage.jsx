@@ -69,28 +69,39 @@ export function PublicFormPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-10 text-ink">
-      <div className="mx-auto max-w-xl rounded-md border border-slate-200 bg-white p-6 shadow-panel">
-        <FormRenderer
-          title={form.name}
-          description={form.description}
-          schema={form.schema}
-          values={values}
-          status={status}
-          onChange={updateValue}
-          onSubmit={handleSubmit}
-        />
-        {notice ? (
-          <div
-            className={`mt-4 flex items-start gap-2 rounded-md border px-3 py-2 text-sm ${
-              status === "error"
-                ? "border-red-200 bg-red-50 text-red-800"
-                : "border-brand-100 bg-brand-50 text-brand-700"
-            }`}
-          >
-            <CheckCircle2 size={16} />
-            <span>{notice}</span>
-          </div>
+      <div className="mx-auto max-w-xl overflow-hidden rounded-md border border-slate-200 bg-white shadow-panel">
+        {form.banner_image_url ? (
+          <img src={form.banner_image_url} alt="" className="h-48 w-full object-cover" />
         ) : null}
+        <div className="p-6">
+          {form.header_text ? (
+            <h1 className="mb-4 text-2xl font-bold text-slate-950">{form.header_text}</h1>
+          ) : null}
+          <FormRenderer
+            title={form.name}
+            description={form.description}
+            schema={form.schema}
+            values={values}
+            status={status}
+            onChange={updateValue}
+            onSubmit={handleSubmit}
+          />
+          {notice ? (
+            <div
+              className={`mt-4 flex items-start gap-2 rounded-md border px-3 py-2 text-sm ${
+                status === "error"
+                  ? "border-red-200 bg-red-50 text-red-800"
+                  : "border-brand-100 bg-brand-50 text-brand-700"
+              }`}
+            >
+              <CheckCircle2 size={16} />
+              <span>{notice}</span>
+            </div>
+          ) : null}
+          {form.footer_text ? (
+            <p className="mt-6 border-t border-slate-200 pt-4 text-xs text-slate-500">{form.footer_text}</p>
+          ) : null}
+        </div>
       </div>
     </main>
   );

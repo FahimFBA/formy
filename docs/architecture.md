@@ -9,32 +9,50 @@ run it, and `docs/integration-guide.md` for the three ways to embed or reuse it 
 
 The `backend/formy` package owns the domain model:
 
-- `Form` stores the portable JSON schema, publication state, and an `owner` (nullable FK to
-  `AUTH_USER_MODEL`, so the app works whether or not the host project assigns owners).
+- `Form` stores the portable JSON schema, publication state, an `owner` (nullable FK to
+  `AUTH_USER_MODEL`, so the app works whether or not the host project assigns owners), and optional
+  public-page presentation: `banner_image`, `header_text`, `footer_text`.
 - `FormSubmission` stores normalized submission payloads and the schema version that was live when
   the submission was made.
+- `SubmissionAttachment` stores a file uploaded against one of a submission's `"file"`-type schema
+  fields, namespaced on disk by form and submission id (`attachment_upload_path`). The submission's
+  own `data` only holds a reference (`attachment_id` and `filename`); the file itself is served
+  through the owner-only `GET /api/attachments/<id>/download/`.
 - `UserProfile` stores per-user extras that do not belong on `AUTH_USER_MODEL` itself: an optional
   `avatar` image and a `language` preference (`en`, `es`, or `zh`; defaults to `en`) that drives the
   frontend's UI language.
 - `labels.py` loads `label-universe/labels.json` and exposes its English strings as `LABELS`, used
   for default exception messages and API response text so wording is defined once; see
   `label-universe/README.md`.
-- `services.py` holds business logic and validation (submission creation, avatar upload
-  validation, user registration) so views stay thin and this logic can be reused by other Django
-  projects or management commands. Views call into it and translate whatever it raises into an
-  HTTP response.
+- `services.py` holds business logic and validation (submission creation and attachment storage,
+  image upload validation for avatars and form banners, user registration) so views stay thin and
+  this logic can be reused by other Django projects or management commands. `validate_image_upload`
+  is the shared Pillow-decode-and-size-cap check both `validate_avatar_upload` and
+  `validate_banner_upload` call with their own exception classes and size cap; `validate_attachment_upload`
+  only checks size, since attachments are arbitrary documents, not necessarily images. Views call
+  into all of these and translate whatever they raise into an HTTP response.
 - `exceptions.py` holds the domain-specific exceptions services.py raises for business-rule
-  violations (`FormNotAcceptingSubmissions`, `UsernameAlreadyTaken`, `AvatarTooLarge`, and so on),
-  kept separate from plain field validation (`django.core.exceptions.ValidationError`, raised by
-  model `clean()` methods and serializer `validate_*()` methods).
+  violations (`FormNotAcceptingSubmissions`, `UsernameAlreadyTaken`, `AvatarTooLarge`,
+  `BannerTooLarge`, `AttachmentTooLarge`, and so on), kept separate from plain field validation
+  (`django.core.exceptions.ValidationError`, raised by model `clean()` methods and serializer
+  `validate_*()` methods).
 - `serializers.py` / `permissions.py` / `views.py` expose a Django REST Framework API:
   - `FormViewSet`: authenticated CRUD, scoped to `request.user`'s own forms, plus `submissions`
-    (paginated list) and `export` (CSV, JSON, or a formatted PDF) actions.
+    (paginated list), `export` (CSV, JSON, or a formatted PDF), and `banner` (upload/remove the
+    form's banner image) actions. Export renders `multi_select`, `phone`, and `file` field values
+    as plain text via the module-level `_field_display_value` helper rather than a raw Python
+    repr.
   - `PublicFormDetailView` / `PublicSubmitView`: anonymous read/submit by slug, published forms
     only. Submission is honeypot-protected (`constants.HONEYPOT_FIELD`, silently dropped if
     filled) and throttled per form and IP (`throttling.SubmissionRateThrottle`, rate configurable
-    via `FORMY_SUBMISSION_THROTTLE_RATE`). Rejects to an unpublished form raise
-    `exceptions.FormNotAcceptingSubmissions`, which the view translates to a 400.
+    via `FORMY_SUBMISSION_THROTTLE_RATE`). `PublicSubmitView` accepts either plain JSON or
+    `multipart/form-data` (the latter required whenever the schema has a `"file"` field, since a
+    real upload cannot be embedded in nested JSON); `services.create_submission` validates any
+    attached files (`AttachmentTooLarge`) before creating `SubmissionAttachment` rows for them.
+    Rejects to an unpublished form raise `exceptions.FormNotAcceptingSubmissions`, which the view
+    translates to a 400.
+  - `SubmissionAttachmentDownloadView`: owner-only file download for one `SubmissionAttachment`,
+    checked against `attachment.submission.form.owner_id`.
   - `RegisterView` + DRF's `obtain_auth_token`: token issuance so the API is usable standalone.
     `RegisterView` calls `services.register_user`, which raises `MissingCredentials` or
     `UsernameAlreadyTaken` for the view to translate into a 400.
@@ -58,18 +76,25 @@ reusable app remains portable: copy that one directory into another Django proje
 
 The `frontend/src` app is schema-driven and router-based:
 
-- `SchemaEditor` edits the schema, with drag-and-drop field reordering.
+- `SchemaEditor` edits the schema, with drag-and-drop field reordering. `select` and `multi_select`
+  fields share the same options editor; `phone` and `file` fields need no extra per-field config.
 - `FormRenderer` renders any supported schema (used both in the builder preview and the public
-  page).
+  page). `multi_select` renders a checkbox group (array value); `phone` renders a country-code
+  `<select>` (from `label-universe/countries.json`) plus a number input (`{country_code, number}`
+  object value); `file` renders a native file input holding an actual `File` object, which
+  `submitPublicForm` (`api/forms.js`) detects and sends over `multipart/form-data` instead of the
+  plain JSON path.
 - `api/client.js` centralizes fetch, token attachment, error unwrapping, and a separate multipart
   helper for file uploads.
 - `api/auth.js` / `api/forms.js` isolate backend communication (auth, profile, CRUD, public
   read/submit).
 - Pages: `LoginPage`, `DashboardPage` (list/create/delete forms, paginated, delete asks for
   confirmation through `ConfirmDialog` rather than the browser's native `confirm()`), `BuilderPage`
-  (edit schema plus metadata, drag-and-drop field reordering, live preview), `SubmissionsPage`
-  (with CSV/JSON/PDF export), `ProfilePage` (account details, password change, avatar upload),
-  `PublicFormPage` (`/f/:slug`, anonymous).
+  (edit schema plus metadata, drag-and-drop field reordering, live preview, banner image
+  upload/removal, header/footer text), `SubmissionsPage` (with CSV/JSON/PDF export and per-submission
+  attachment download buttons), `ProfilePage` (account details, password change, avatar upload),
+  `PublicFormPage` (`/f/:slug`, anonymous; renders the form's banner image, header text, and footer
+  text around `FormRenderer` when set).
 - `components/ConfirmDialog.jsx` is a small reusable modal (backdrop click, Escape key, and a
   Cancel button all dismiss it) used anywhere a destructive action needs confirmation, currently
   form deletion.
@@ -103,8 +128,10 @@ shipped. See `docs/integration-guide.md` for the embed snippet and CORS requirem
 headings, notices, error messages), each key holding an `en`/`es`/`zh` translation. It is not part
 of `backend/` or `frontend/`, both of which read from it directly (`backend/formy/labels.py`,
 `frontend/src/lib/i18n.jsx`), so wording is defined once regardless of which side renders it.
-See `label-universe/README.md` for the full format and what does not belong there (user-authored
-form content stays out of it).
+`label-universe/countries.json` is a companion dataset (not UI copy): the dial-code list the
+`phone` field type's country picker offers, each entry an ISO-3166 code, dial code, and an
+`en`/`es`/`zh` country name. See `label-universe/README.md` for the full format and what does not
+belong there (user-authored form content stays out of it).
 
 ## Deployment
 

@@ -10,15 +10,33 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
 from .labels import LABELS
-from .models import Form, FormSubmission, UserProfile, validate_form_schema
+from .models import Form, FormSubmission, SubmissionAttachment, UserProfile, validate_form_schema
 
 User = get_user_model()
+
+
+def _build_banner_image_url(form, context):
+    """
+    :param form: the Form whose banner_image is being resolved
+    :param context: the serializer context, used for its optional "request"
+    :return: (str or None) absolute banner image URL, or None if the form has no banner
+    """
+    if not form.banner_image:
+        return None
+    request = context.get("request")
+    url = form.banner_image.url
+    return request.build_absolute_uri(url) if request else url
 
 
 class FormSerializer(serializers.ModelSerializer):
     """
     Authenticated CRUD representation of a form, owned by the requesting user.
+    banner_image itself is uploaded/removed through FormViewSet.banner, not this
+    serializer, since Form CRUD is JSON-only; banner_image_url just reflects whatever
+    is currently set.
     """
+
+    banner_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Form
@@ -31,10 +49,13 @@ class FormSerializer(serializers.ModelSerializer):
             "schema",
             "schema_version",
             "success_message",
+            "banner_image_url",
+            "header_text",
+            "footer_text",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "schema_version", "created_at", "updated_at"]
+        read_only_fields = ["id", "schema_version", "banner_image_url", "created_at", "updated_at"]
 
     def validate_schema(self, value):
         """
@@ -46,6 +67,13 @@ class FormSerializer(serializers.ModelSerializer):
         validate_form_schema(value)
         return value
 
+    def get_banner_image_url(self, form):
+        """
+        :param form: the Form instance being serialized
+        :return: (str or None) absolute banner image URL, or None if the form has no banner
+        """
+        return _build_banner_image_url(form, self.context)
+
 
 class PublicFormSerializer(serializers.ModelSerializer):
     """
@@ -53,9 +81,52 @@ class PublicFormSerializer(serializers.ModelSerializer):
     schema_version, and timestamps, none of which an anonymous visitor needs.
     """
 
+    banner_image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Form
-        fields = ["id", "name", "slug", "description", "schema", "success_message"]
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "description",
+            "schema",
+            "success_message",
+            "banner_image_url",
+            "header_text",
+            "footer_text",
+        ]
+
+    def get_banner_image_url(self, form):
+        """
+        :param form: the Form instance being serialized
+        :return: (str or None) absolute banner image URL, or None if the form has no banner
+        """
+        return _build_banner_image_url(form, self.context)
+
+
+class SubmissionAttachmentSerializer(serializers.ModelSerializer):
+    """
+    Read-only representation of a single file attached to a submission, exposing a
+    download URL rather than the raw storage path.
+    """
+
+    filename = serializers.CharField(source="original_filename")
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SubmissionAttachment
+        fields = ["id", "field_name", "filename", "content_type", "size", "url"]
+        read_only_fields = fields
+
+    def get_url(self, attachment):
+        """
+        :param attachment: the SubmissionAttachment instance being serialized
+        :return: (str) absolute URL of the owner-only download endpoint for this attachment
+        """
+        request = self.context.get("request")
+        path = f"/api/attachments/{attachment.id}/download/"
+        return request.build_absolute_uri(path) if request else path
 
 
 class FormSubmissionSerializer(serializers.ModelSerializer):
@@ -64,9 +135,11 @@ class FormSubmissionSerializer(serializers.ModelSerializer):
     submissions are created through services.create_submission, not this serializer.
     """
 
+    attachments = SubmissionAttachmentSerializer(many=True, read_only=True)
+
     class Meta:
         model = FormSubmission
-        fields = ["id", "data", "metadata", "schema_version", "submitted_at"]
+        fields = ["id", "data", "metadata", "schema_version", "submitted_at", "attachments"]
         read_only_fields = fields
 
 
