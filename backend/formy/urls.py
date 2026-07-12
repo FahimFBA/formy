@@ -24,5 +24,10 @@ urlpatterns = [
     path("auth/change-password/", views.ChangePasswordView.as_view(), name="change-password"),
     path("public/forms/<slug:slug>/", views.PublicFormDetailView.as_view(), name="public-form-detail"),
     path("public/forms/<slug:slug>/submit/", views.PublicSubmitView.as_view(), name="public-form-submit"),
+    path(
+        "attachments/<uuid:pk>/download/",
+        views.SubmissionAttachmentDownloadView.as_view(),
+        name="attachment-download",
+    ),
     path("", include(router.urls)),
 ]

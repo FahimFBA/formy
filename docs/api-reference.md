@@ -117,18 +117,26 @@ Form object:
   "schema": { "fields": [] },
   "schema_version": 1,
   "success_message": "Thanks. Your response was submitted.",
+  "banner_image_url": null,
+  "header_text": "",
+  "footer_text": "",
   "created_at": "2026-07-10T12:00:00Z",
   "updated_at": "2026-07-10T12:00:00Z"
 }
 ```
 
 `status` is one of `draft`, `published`, `archived`. Only `published` forms are reachable through
-the public endpoints below. `schema_version`, `created_at`, `updated_at`, and `id` are read only.
+the public endpoints below. `schema_version`, `banner_image_url`, `created_at`, `updated_at`, and
+`id` are read only. `banner_image_url` is set/cleared through `POST`/`DELETE
+/api/forms/<id>/banner/` below, not through this object directly. `header_text` (optional heading
+shown above the form on the public page) and `footer_text` (optional text shown below the submit
+button) are plain writable fields.
 
 ### `POST /api/forms/`
 
 Create a form. Send `name`, `slug`, `schema`, and optionally `description`, `status`,
-`success_message`. `schema` is validated server side, see "Form schema" below.
+`success_message`, `header_text`, `footer_text`. `schema` is validated server side, see "Form
+schema" below.
 
 ### `GET /api/forms/<id>/`
 
@@ -144,6 +152,17 @@ even after you edit the form's fields later.
 
 Delete a form and cascade-delete all of its submissions. Not reversible.
 
+### `POST /api/forms/<id>/banner/`
+
+Authenticated, multipart form data with a single file field named `banner`. Maximum 5 MB, and must
+decode as a real image (same Pillow-based validation as avatar uploads). Returns the updated form
+(same shape as `GET /forms/<id>/`), with a fresh `banner_image_url`. `400` if the file is missing,
+too large, or not a decodable image.
+
+### `DELETE /api/forms/<id>/banner/`
+
+Authenticated. Removes the current banner image, if any. Returns the updated form.
+
 ### `GET /api/forms/<id>/submissions/`
 
 Paginated list of that form's submissions, same pagination shape as the forms list. Submission
@@ -155,9 +174,28 @@ object:
   "data": { "email": "someone@example.com" },
   "metadata": { "ip": "203.0.113.7", "user_agent": "Mozilla/5.0 ..." },
   "schema_version": 1,
-  "submitted_at": "2026-07-10T12:05:00Z"
+  "submitted_at": "2026-07-10T12:05:00Z",
+  "attachments": [
+    {
+      "id": "8f0a...",
+      "field_name": "resume",
+      "filename": "resume.pdf",
+      "content_type": "application/pdf",
+      "size": 48213,
+      "url": "http://localhost:8000/api/attachments/8f0a.../download/"
+    }
+  ]
 }
 ```
+
+`attachments` lists any files uploaded against this submission's `"file"`-type fields (see "Form
+schema" below); it is empty if the form's schema has none. Each attachment's `url` is the
+owner-only download endpoint below, not a direct media URL.
+
+### `GET /api/attachments/<id>/download/`
+
+Authenticated. Downloads one submission attachment. Only the owner of the attachment's form may
+download it; anyone else (including other authenticated users) gets `404`.
 
 ### `GET /api/forms/<id>/export/`
 
@@ -187,7 +225,10 @@ Returns the form's schema for rendering:
   "slug": "contact",
   "description": "",
   "schema": { "fields": [ { "name": "email", "label": "Email", "type": "email", "required": true } ] },
-  "success_message": "Thanks. Your response was submitted."
+  "success_message": "Thanks. Your response was submitted.",
+  "banner_image_url": null,
+  "header_text": "",
+  "footer_text": ""
 }
 ```
 
@@ -195,8 +236,20 @@ Returns the form's schema for rendering:
 
 ### `POST /api/public/forms/<slug>/submit/`
 
+Plain JSON, for schemas with no `"file"` field:
+
 ```json
 { "data": { "email": "someone@example.com" } }
+```
+
+If the schema has a `"file"` field, send `multipart/form-data` instead: a `data` field holding the
+same object as a JSON-encoded string, plus one file part per `"file"` field, named after that
+field's `name`:
+
+```bash
+curl -X POST http://localhost:8000/api/public/forms/jobs/submit/ \
+  -F 'data={"email":"someone@example.com"}' \
+  -F "resume=@./resume.pdf"
 ```
 
 Response `201`: `{ "id": "<submission-id>", "message": "<form.success_message>" }`.
@@ -236,9 +289,28 @@ Two protections apply to this endpoint:
 
 - `name`: unique within the form, used as the key in submitted `data`.
 - `label`: shown to the person filling out the form.
-- `type`: one of `text`, `textarea`, `email`, `number`, `select`, `checkbox`, `date`.
+- `type`: one of `text`, `textarea`, `email`, `number`, `select`, `checkbox`, `date`,
+  `multi_select`, `phone`, `file`.
 - `required`: optional, defaults to `false`.
-- `select` fields additionally require a non-empty `options` array.
+- `select` and `multi_select` fields additionally require a non-empty `options` array.
+- `file` fields optionally take `accept` (a comma-separated list of allowed extensions, for example
+  `".pdf,.docx"`; no restriction if omitted) and `max_files` (a positive integer, default `1`,
+  allowing more than one upload against the same field).
 
 Submitting or saving a schema that violates any of the above returns a `400` with a descriptive
 message (see `validate_form_schema` in `backend/formy/models.py` for the exact rules).
+
+The three added types store a different shape in submitted `data` than a plain string:
+
+- `multi_select`: an array of the selected options, for example `["Product", "Support"]`. Required
+  means "at least one option selected".
+- `phone`: an object `{ "country_code": "+880", "number": "1712345678" }`. `country_code` is a
+  dial code (see `label-universe/countries.json` for the list the frontend offers); required means
+  `number` must be non-empty, `country_code` may be blank.
+- `file`: not sent inline in `data`. Upload it as one or more real files over
+  `multipart/form-data` (see `POST /api/public/forms/<slug>/submit/` above, repeat the same file
+  part name for more than one file up to `max_files`); the server replaces it with an array of
+  references, `[{ "attachment_id": "...", "filename": "resume.pdf" }]`, and each attachment's
+  bytes are downloadable through `GET /api/attachments/<id>/download/`. Required means at least one
+  file must be attached. Uploading more files than `max_files` allows, or a file whose extension is
+  not in `accept`, returns a `400`.

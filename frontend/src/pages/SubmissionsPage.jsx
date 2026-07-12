@@ -3,13 +3,28 @@
 // Lists a form's submissions as raw JSON, with CSV/JSON/PDF export buttons that
 // trigger a browser download of the exported file.
 
-import { Download } from "lucide-react";
+import { Download, Paperclip } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { exportSubmissions, listSubmissions } from "../api/forms";
+import { downloadAttachment, exportSubmissions, listSubmissions } from "../api/forms";
 import { Layout } from "../components/Layout";
 import { useTranslation } from "../lib/i18n";
+
+/**
+ * Triggers a browser download for an already-fetched blob.
+ * @param {Blob} blob
+ * @param {string} filename
+ * @returns {void}
+ */
+function saveBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 /**
  * @returns {JSX.Element}
@@ -32,14 +47,18 @@ export function SubmissionsPage() {
   async function handleExport(format) {
     try {
       const { blob, filename } = await exportSubmissions(id, format);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      link.click();
-      URL.revokeObjectURL(url);
+      saveBlob(blob, filename);
     } catch (exportError) {
       setError(exportError.message);
+    }
+  }
+
+  async function handleAttachmentDownload(attachmentId) {
+    try {
+      const { blob, filename } = await downloadAttachment(attachmentId);
+      saveBlob(blob, filename);
+    } catch (downloadError) {
+      setError(downloadError.message);
     }
   }
 
@@ -99,6 +118,22 @@ export function SubmissionsPage() {
             <pre className="mt-2 overflow-auto rounded-md bg-slate-50 p-3 text-xs leading-6 text-slate-800">
               {JSON.stringify(submission.data, null, 2)}
             </pre>
+            {submission.attachments?.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {submission.attachments.map((attachment) => (
+                  <button
+                    key={attachment.id}
+                    type="button"
+                    title={t("title_download_attachment")}
+                    onClick={() => handleAttachmentDownload(attachment.id)}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <Paperclip size={12} />
+                    {attachment.filename}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
         ))}
       </div>

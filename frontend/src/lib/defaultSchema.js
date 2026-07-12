@@ -36,4 +36,15 @@ export const defaultSchema = {
   ],
 };
 
-export const fieldTypes = ["text", "textarea", "email", "number", "select", "checkbox", "date"];
+export const fieldTypes = [
+  "text",
+  "textarea",
+  "email",
+  "number",
+  "select",
+  "checkbox",
+  "date",
+  "multi_select",
+  "phone",
+  "file",
+];

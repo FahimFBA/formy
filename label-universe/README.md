@@ -29,6 +29,15 @@ To add a fourth language, add its code to every key's object and to
 `SUPPORTED_LANGUAGES` in `frontend/src/lib/i18n.jsx`; do this one key at a time so the
 file is never left with a partially translated key.
 
+## countries.json
+
+A companion dataset, not UI copy: the country list the `phone` field type's country
+code picker offers. Each entry is
+`{ "iso2": "BD", "dial_code": "+880", "name": { "en": ..., "es": ..., "zh": ... } }`.
+Read directly by `FormRenderer.jsx`, `embed/main.js`, and any place that needs to
+render a country's dial code or localized name; it does not go through `useTranslation()`
+since it is keyed by country, not by UI string.
+
 ## What does not belong here
 
 User-authored content (a form's own name, field labels, submitted data) is not UI

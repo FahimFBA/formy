@@ -66,3 +66,61 @@ class InvalidAvatarFile(Exception):
         """
         self.message = message
         super().__init__(message)
+
+
+class BannerTooLarge(Exception):
+
+    def __init__(self, message=LABELS["err_banner_too_large"]):
+        """
+        Raised when an uploaded form banner exceeds settings.MAX_BANNER_UPLOAD_BYTES.
+        :param message: human-readable explanation returned to the API caller
+        """
+        self.message = message
+        super().__init__(message)
+
+
+class InvalidBannerFile(Exception):
+
+    def __init__(self, message=LABELS["err_banner_invalid"]):
+        """
+        Raised when an uploaded form banner fails to decode as an actual image,
+        regardless of its file extension or client-supplied content type.
+        :param message: human-readable explanation returned to the API caller
+        """
+        self.message = message
+        super().__init__(message)
+
+
+class AttachmentTooLarge(Exception):
+
+    def __init__(self, message=LABELS["err_attachment_too_large"]):
+        """
+        Raised when a submission's uploaded file exceeds settings.MAX_ATTACHMENT_UPLOAD_BYTES.
+        :param message: human-readable explanation returned to the API caller
+        """
+        self.message = message
+        super().__init__(message)
+
+
+class InvalidAttachmentType(Exception):
+
+    def __init__(self, message=LABELS["err_attachment_type_invalid"]):
+        """
+        Raised when a submission's uploaded file's extension is not in its "file" schema
+        field's "accept" list.
+        :param message: human-readable explanation returned to the API caller
+        """
+        self.message = message
+        super().__init__(message)
+
+
+class TooManyAttachments(Exception):
+
+    def __init__(self, message=LABELS["err_too_many_attachments"]):
+        """
+        Raised when more files are uploaded against a "file" schema field than its
+        "max_files" allows.
+        :param message: human-readable explanation returned to the API caller
+        """
+        self.message = message
+        super().__init__(message)

@@ -4,7 +4,7 @@
 
 from django.contrib import admin
 
-from .models import Form, FormSubmission
+from .models import Form, FormSubmission, SubmissionAttachment
 
 
 @admin.register(Form)
@@ -31,3 +31,15 @@ class FormSubmissionAdmin(admin.ModelAdmin):
     list_filter = ("form",)
     readonly_fields = ("submitted_at",)
     search_fields = ("form__name", "form__slug")
+
+
+@admin.register(SubmissionAttachment)
+class SubmissionAttachmentAdmin(admin.ModelAdmin):
+    """
+    Admin list/search configuration for SubmissionAttachment. Read-only since
+    attachments should only be created through services.create_submission.
+    """
+
+    list_display = ("original_filename", "field_name", "submission", "size", "uploaded_at")
+    readonly_fields = ("uploaded_at",)
+    search_fields = ("original_filename", "field_name", "submission__form__slug")

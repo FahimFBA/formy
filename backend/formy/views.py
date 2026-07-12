@@ -1,16 +1,17 @@
 # By: Md. Fahim Bin Amin
 
 # This file contains the DRF views exposed under /api/. Business rules (submission
-# creation, avatar validation, registration) live in services.py; views only translate
-# requests into service/serializer calls and translate the exceptions raised there into
-# HTTP responses.
+# creation, avatar/banner/attachment validation, registration) live in services.py;
+# views only translate requests into service/serializer calls and translate the
+# exceptions raised there into HTTP responses.
 
 import csv
 import io
+import json
 from xml.sax.saxutils import escape
 
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.http import HttpResponse
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from reportlab.lib import colors
@@ -20,21 +21,26 @@ from reportlab.lib.units import inch
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from rest_framework import generics, serializers, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.parsers import MultiPartParser
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .constants import HONEYPOT_FIELD
 from .exceptions import (
+    AttachmentTooLarge,
     AvatarTooLarge,
+    BannerTooLarge,
     FormNotAcceptingSubmissions,
+    InvalidAttachmentType,
     InvalidAvatarFile,
+    InvalidBannerFile,
     MissingCredentials,
+    TooManyAttachments,
     UsernameAlreadyTaken,
 )
 from .labels import LABELS
-from .models import Form, UserProfile
+from .models import Form, SubmissionAttachment, UserProfile
 from .permissions import IsOwner
 from .serializers import (
     ChangePasswordSerializer,
@@ -44,8 +50,35 @@ from .serializers import (
     SubmissionCreateSerializer,
     UserSerializer,
 )
-from .services import create_submission, register_user, validate_avatar_upload
+from .services import create_submission, register_user, validate_avatar_upload, validate_banner_upload
 from .throttling import SubmissionRateThrottle
+
+
+def _field_display_value(field: dict, submission) -> str:
+    """
+    Renders one submission's value for one schema field as plain text for CSV/PDF
+    export, formatting the compound types ("multi_select", "phone", "file") that a
+    bare str() would otherwise render as a Python dict/list repr.
+    :param field: the schema field being rendered
+    :param submission: the FormSubmission being exported
+    :return: (str) the field's value, formatted for a spreadsheet/PDF cell
+    """
+    value = submission.data.get(field["name"], "")
+
+    if field["type"] == "multi_select":
+        return ", ".join(value) if isinstance(value, list) else str(value)
+
+    if field["type"] == "phone":
+        if isinstance(value, dict):
+            return f"{value.get('country_code', '')} {value.get('number', '')}".strip()
+        return str(value)
+
+    if field["type"] == "file":
+        if isinstance(value, list):
+            return ", ".join(item.get("filename", "") for item in value if isinstance(item, dict))
+        return ""
+
+    return str(value)
 
 
 class FormViewSet(viewsets.ModelViewSet):
@@ -78,7 +111,7 @@ class FormViewSet(viewsets.ModelViewSet):
         """
         form = self.get_object()
         page = self.paginate_queryset(form.submissions.all())
-        serializer = FormSubmissionSerializer(page, many=True)
+        serializer = FormSubmissionSerializer(page, many=True, context={"request": request})
         return self.get_paginated_response(serializer.data)
 
     @action(detail=True, methods=["get"])
@@ -93,7 +126,7 @@ class FormViewSet(viewsets.ModelViewSet):
         export_format = request.query_params.get("export_format", "csv")
 
         if export_format == "json":
-            serializer = FormSubmissionSerializer(submissions, many=True)
+            serializer = FormSubmissionSerializer(submissions, many=True, context={"request": request})
             return Response(serializer.data)
 
         fields = form.schema.get("fields", [])
@@ -104,7 +137,7 @@ class FormViewSet(viewsets.ModelViewSet):
                 [
                     timezone.localtime(submission.submitted_at).strftime("%b %d, %Y %I:%M %p"),
                     str(submission.schema_version),
-                    *(str(submission.data.get(field["name"], "")) for field in fields),
+                    *(_field_display_value(field, submission) for field in fields),
                 ]
                 for submission in submissions
             ]
@@ -114,11 +147,41 @@ class FormViewSet(viewsets.ModelViewSet):
             [
                 submission.submitted_at.isoformat(),
                 str(submission.schema_version),
-                *(str(submission.data.get(field["name"], "")) for field in fields),
+                *(_field_display_value(field, submission) for field in fields),
             ]
             for submission in submissions
         ]
         return self._export_csv(form, header, rows)
+
+    @action(detail=True, methods=["post", "delete"], parser_classes=[MultiPartParser])
+    def banner(self, request, pk=None):
+        """
+        Uploads (POST) or removes (DELETE) this form's banner image.
+        :body banner: (multipart file, POST only) the image to set as the banner
+        :return: (Response) 200 with the updated form, or 400 if the file is missing,
+            too large, or not a valid image
+        """
+        form = self.get_object()
+
+        if request.method == "DELETE":
+            if form.banner_image:
+                form.banner_image.delete(save=False)
+                form.banner_image = None
+                form.save(update_fields=["banner_image"])
+            return Response(FormSerializer(form, context={"request": request}).data)
+
+        banner = request.FILES.get("banner")
+        if not banner:
+            return Response({"detail": LABELS["err_banner_required"]}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            validate_banner_upload(banner)
+        except (BannerTooLarge, InvalidBannerFile) as error:
+            return Response({"detail": error.message}, status=status.HTTP_400_BAD_REQUEST)
+
+        form.banner_image = banner
+        form.save(update_fields=["banner_image"])
+        return Response(FormSerializer(form, context={"request": request}).data)
 
     def _export_csv(self, form, header, rows):
         """
@@ -210,10 +273,14 @@ class PublicFormDetailView(generics.RetrieveAPIView):
 class PublicSubmitView(APIView):
     """
     Anonymous submission endpoint for a published form. Honeypot-protected and rate
-    limited per form and IP via SubmissionRateThrottle.
+    limited per form and IP via SubmissionRateThrottle. Accepts either a plain JSON
+    body ({"data": {...}}) or multipart/form-data (used whenever the schema has a
+    "file" field, since the browser has to send real files alongside the rest of the
+    answers; "data" then arrives as a JSON-encoded string field instead of nested JSON).
     """
 
     permission_classes = [AllowAny]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
     throttle_classes = [SubmissionRateThrottle]
 
     def post(self, request, slug):
@@ -221,7 +288,8 @@ class PublicSubmitView(APIView):
         Accepts a submission for the form identified by slug.
         :param slug: the form's slug
         :return: (Response) 201 with the new submission id, or a translated 400 if the
-            form is not accepting submissions or the data fails schema validation
+            form is not accepting submissions, an attached file is too large, or the
+            data fails schema validation
         """
         form = get_object_or_404(Form, slug=slug)
 
@@ -233,7 +301,14 @@ class PublicSubmitView(APIView):
                 status=status.HTTP_201_CREATED,
             )
 
-        payload = SubmissionCreateSerializer(data=request.data)
+        raw_data = request.data.get("data", {})
+        if isinstance(raw_data, str):
+            try:
+                raw_data = json.loads(raw_data) if raw_data else {}
+            except json.JSONDecodeError as error:
+                raise serializers.ValidationError({"detail": LABELS["err_invalid_submission_json"]}) from error
+
+        payload = SubmissionCreateSerializer(data={"data": raw_data})
         payload.is_valid(raise_exception=True)
 
         try:
@@ -244,8 +319,11 @@ class PublicSubmitView(APIView):
                     "ip": request.META.get("REMOTE_ADDR"),
                     "user_agent": request.headers.get("User-Agent", ""),
                 },
+                files=request.FILES,
             )
         except FormNotAcceptingSubmissions as error:
+            raise serializers.ValidationError({"detail": error.message}) from error
+        except (AttachmentTooLarge, InvalidAttachmentType, TooManyAttachments) as error:
             raise serializers.ValidationError({"detail": error.message}) from error
         except DjangoValidationError as error:
             raise serializers.ValidationError({"detail": error.messages}) from error
@@ -253,6 +331,31 @@ class PublicSubmitView(APIView):
         return Response(
             {"id": str(submission.id), "message": form.success_message},
             status=status.HTTP_201_CREATED,
+        )
+
+
+class SubmissionAttachmentDownloadView(APIView):
+    """
+    Owner-only download of a single file attached to one of a form's submissions.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        """
+        :param pk: the SubmissionAttachment's id
+        :return: (FileResponse) the stored file as an attachment download
+        :errors: django.http.Http404 if the attachment does not exist or does not
+            belong to a form owned by the requesting user
+        """
+        attachment = get_object_or_404(SubmissionAttachment, pk=pk)
+        if attachment.submission.form.owner_id != request.user.id:
+            raise Http404
+
+        return FileResponse(
+            attachment.file.open("rb"),
+            as_attachment=True,
+            filename=attachment.original_filename,
         )
 
 

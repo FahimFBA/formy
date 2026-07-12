@@ -1,9 +1,11 @@
 # By: Md. Fahim Bin Amin
 
 # This file contains the domain model: Form (the portable JSON schema and its
-# publication state), FormSubmission (a normalized submission plus the schema version
-# that was live at submit time), UserProfile (per-user extras that do not belong on
-# AUTH_USER_MODEL), and the schema/submission-data validators both models rely on.
+# publication state, plus its optional banner/header/footer presentation fields),
+# FormSubmission (a normalized submission plus the schema version that was live at
+# submit time), SubmissionAttachment (a file uploaded against one "file" schema field
+# of a submission), UserProfile (per-user extras that do not belong on AUTH_USER_MODEL),
+# and the schema/submission-data validators both Form and FormSubmission rely on.
 
 import uuid
 
@@ -15,8 +17,9 @@ from django.utils import timezone
 
 class Form(models.Model):
     """
-    A form definition: its schema, publication status, and ownership. owner is nullable
-    so the app works whether or not the host project assigns forms to a user.
+    A form definition: its schema, publication status, ownership, and optional public
+    page presentation (banner image, header text, footer text). owner is nullable so
+    the app works whether or not the host project assigns forms to a user.
     """
 
     class Status(models.TextChoices):
@@ -39,6 +42,9 @@ class Form(models.Model):
     schema = models.JSONField(default=dict)
     schema_version = models.PositiveIntegerField(default=1)
     success_message = models.CharField(max_length=240, default="Thanks. Your response was submitted.")
+    banner_image = models.ImageField(upload_to="form_banners/", blank=True, null=True)
+    header_text = models.CharField(max_length=200, blank=True)
+    footer_text = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -102,6 +108,37 @@ class FormSubmission(models.Model):
         validate_submission_data(self.form.schema, self.data)
 
 
+def attachment_upload_path(instance: "SubmissionAttachment", filename: str) -> str:
+    """
+    :param instance: the SubmissionAttachment being saved
+    :param filename: the uploaded file's original name
+    :return: (str) a storage path namespaced by form and submission, so two
+        submissions' attachments never collide even if the original filenames match
+    """
+    return f"attachments/{instance.submission.form_id}/{instance.submission_id}/{filename}"
+
+
+class SubmissionAttachment(models.Model):
+    """
+    A single file uploaded against one "file"-type schema field of a FormSubmission.
+    The submission's own data dict stores only a reference (attachment id and original
+    filename) for display; the actual file lives here so it can be validated, stored,
+    and served independently of the submission's JSON payload.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    submission = models.ForeignKey(FormSubmission, related_name="attachments", on_delete=models.CASCADE)
+    field_name = models.CharField(max_length=120)
+    file = models.FileField(upload_to=attachment_upload_path)
+    original_filename = models.CharField(max_length=255)
+    content_type = models.CharField(max_length=120, blank=True)
+    size = models.PositiveIntegerField()
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return self.original_filename
+
+
 class UserProfile(models.Model):
     """
     Per-user extras that do not belong on AUTH_USER_MODEL itself: an optional avatar
@@ -122,14 +159,28 @@ class UserProfile(models.Model):
         return f"{self.user.username} profile"
 
 
-ALLOWED_FIELD_TYPES = {"text", "textarea", "email", "number", "select", "checkbox", "date"}
+ALLOWED_FIELD_TYPES = {
+    "text",
+    "textarea",
+    "email",
+    "number",
+    "select",
+    "checkbox",
+    "date",
+    "multi_select",
+    "phone",
+    "file",
+}
+
+# Field types whose schema definition requires a non-empty "options" list, same as "select".
+OPTIONS_FIELD_TYPES = {"select", "multi_select"}
 
 
 def validate_form_schema(schema: dict) -> None:
     """
     Validates a form's schema shape: a dict with a "fields" list, each field having a
-    unique string name, a supported type, a string label, and (for "select") a
-    non-empty options list.
+    unique string name, a supported type, a string label, and (for "select" and
+    "multi_select") a non-empty options list.
     :param schema: (dict) the schema to validate
     :errors: django.core.exceptions.ValidationError on any malformed field
     """
@@ -158,10 +209,18 @@ def validate_form_schema(schema: dict) -> None:
         if not label or not isinstance(label, str):
             raise ValidationError(f"Field {name} requires a string label.")
 
-        if field_type == "select":
+        if field_type in OPTIONS_FIELD_TYPES:
             options = field.get("options", [])
             if not isinstance(options, list) or not options:
-                raise ValidationError(f"Select field {name} requires options.")
+                raise ValidationError(f"{field_type} field {name} requires options.")
+
+        if field_type == "file":
+            max_files = field.get("max_files", 1)
+            if not isinstance(max_files, int) or isinstance(max_files, bool) or max_files < 1:
+                raise ValidationError(f"file field {name} max_files must be a positive integer.")
+            accept = field.get("accept")
+            if accept is not None and not isinstance(accept, str):
+                raise ValidationError(f"file field {name} accept must be a string.")
 
         seen_names.add(name)
 
@@ -169,9 +228,14 @@ def validate_form_schema(schema: dict) -> None:
 def validate_submission_data(schema: dict, data: dict) -> None:
     """
     Validates that submitted data satisfies a form's schema: schema itself must be
-    valid, data must be an object, and every required field must have a non-empty value.
+    valid, data must be an object, and every required field must have a non-empty
+    value, where "non-empty" is type-specific: a "phone" field needs a number, every
+    other type just needs a truthy value.
     :param schema: (dict) the form's current schema
-    :param data: (dict) submitted field values, keyed by field name
+    :param data: (dict) submitted field values, keyed by field name; for "file"
+        fields, the caller is expected to have already substituted a placeholder
+        truthy value for any field that has an attached upload (see
+        services.create_submission)
     :errors: django.core.exceptions.ValidationError if schema is malformed or a
         required field is missing/empty
     """
@@ -183,6 +247,14 @@ def validate_submission_data(schema: dict, data: dict) -> None:
     for field in schema.get("fields", []):
         name = field["name"]
         required = bool(field.get("required", False))
+        if not required:
+            continue
 
-        if required and data.get(name) in (None, "", []):
+        value = data.get(name)
+        if field["type"] == "phone":
+            is_empty = not isinstance(value, dict) or not value.get("number")
+        else:
+            is_empty = value in (None, "", [])
+
+        if is_empty:
             raise ValidationError(f"{field['label']} is required.")
