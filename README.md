@@ -1,15 +1,38 @@
-# Formy
+<p align="center">
+  <img src="assets/images/formy.png" alt="Formy logo" width="120" />
+</p>
+
+<h1 align="center">Formy</h1>
+
+<p align="center">
+  <a href="https://github.com/FahimFBA/formy/actions/workflows/ci.yml"><img src="https://github.com/FahimFBA/formy/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" /></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/github/v/release/FahimFBA/formy" alt="Latest release" /></a>
+</p>
 
 Formy is a production-oriented customizable forms platform with a Django backend and a
 React/Tailwind frontend. The backend is written as a reusable Django app that can be installed
 into another Django project, and this repository also ships a standalone API project plus a full
 React frontend for development and deployment.
 
+## Features
+
+- **Drag-and-drop form builder** with 10 field types: text, textarea, email, number, select,
+  multi-select, checkbox, date, phone, and file upload with attachments.
+- **Custom form branding**: logo, colors, and theming per form.
+- **Reusable Django app**: vendor `formy` into an existing Django project, or run it standalone.
+- **Embeddable widget** to drop a form into any website, plus a full REST API.
+- **Multi-language UI copy** (English, Spanish, Chinese) shared between backend and frontend via
+  `label-universe`.
+- **Docker-ready** production stack: Postgres, Redis, gunicorn, and nginx.
+- **CI on every PR**: Python lint, backend tests, JS lint, and frontend build.
+
 ## Structure
 
 ```text
+assets/                 Project images (logo, etc.) used by this README
 backend/
-  config/              Django project settings, URL routing, Dockerfile
+  config/               Django project settings, URL routing, Dockerfile
   formy/                Reusable Django app (models, DRF views/serializers, auth)
   manage.py
   requirements.txt
@@ -17,9 +40,12 @@ frontend/
   src/                  React application (pages, components, api client)
   package.json
   tailwind.config.js
+docs/                   Setup, deployment, API, and architecture guides
 label-universe/         Shared UI copy (en/es/zh) read by both backend and frontend
 docker-compose.yml      Postgres, Redis, backend, and frontend for a full local/production-like stack
 .github/workflows/      CI (Python lint, backend tests, JS lint, frontend build) and automated releases
+LICENSE                 MIT license
+CHANGELOG.md            Notable changes per release
 ```
 
 ## Quick start
@@ -66,3 +92,7 @@ npm run build:embed
 ```
 
 `.github/workflows/ci.yml` runs all four on every pull request against `main`.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
