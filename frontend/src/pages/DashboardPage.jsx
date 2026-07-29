@@ -79,7 +79,7 @@ export function DashboardPage() {
   return (
     <Layout>
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-slate-950">{t("title_your_forms")}</h1>
+        <h1 className="text-2xl font-semibold text-slate-950 dark:text-white">{t("title_your_forms")}</h1>
         <button
           className="inline-flex items-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
           type="button"
@@ -90,24 +90,27 @@ export function DashboardPage() {
         </button>
       </div>
 
-      {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="mt-4 text-sm text-red-700 dark:text-red-400">{error}</p> : null}
 
       {loading ? (
-        <p className="mt-6 text-sm text-slate-600">{t("msg_loading")}</p>
+        <p className="mt-6 text-sm text-slate-600 dark:text-slate-400">{t("msg_loading")}</p>
       ) : forms.length === 0 ? (
-        <p className="mt-6 text-sm text-slate-600">{t("msg_no_forms")}</p>
+        <p className="mt-6 text-sm text-slate-600 dark:text-slate-400">{t("msg_no_forms")}</p>
       ) : (
         <div className="mt-6 space-y-3">
           {forms.map((form) => (
             <div
               key={form.id}
-              className="flex items-center justify-between gap-4 rounded-md border border-slate-200 bg-white p-4 shadow-panel"
+              className="flex items-center justify-between gap-4 rounded-md border border-slate-200 bg-white p-4 shadow-panel dark:border-slate-800 dark:bg-slate-900"
             >
               <div>
-                <Link to={`/builder/${form.id}`} className="font-semibold text-slate-950 hover:underline">
+                <Link
+                  to={`/builder/${form.id}`}
+                  className="font-semibold text-slate-950 hover:underline dark:text-white"
+                >
                   {form.name}
                 </Link>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                   /{form.slug} &middot; {t(`lbl_status_${form.status}`)}
                 </p>
               </div>
@@ -115,7 +118,7 @@ export function DashboardPage() {
               <div className="flex items-center gap-2">
                 {form.status === "published" ? (
                   <a
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 transition hover:bg-slate-50"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                     href={`/f/${form.slug}`}
                     target="_blank"
                     rel="noreferrer"
@@ -125,7 +128,7 @@ export function DashboardPage() {
                   </a>
                 ) : null}
                 <button
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-red-200 text-red-700 transition hover:bg-red-50"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-red-200 text-red-700 transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
                   type="button"
                   title={t("title_delete_form_action")}
                   onClick={() => setPendingDelete(form)}
@@ -140,10 +143,12 @@ export function DashboardPage() {
 
       {!loading && count > 0 ? (
         <div className="mt-6 flex items-center justify-between gap-3">
-          <p className="text-sm text-slate-600">{t("msg_forms_summary", { page, pageCount, count })}</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            {t("msg_forms_summary", { page, pageCount, count })}
+          </p>
           <div className="flex gap-2">
             <button
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               type="button"
               disabled={page <= 1}
               onClick={() => setPage((current) => current - 1)}
@@ -152,7 +157,7 @@ export function DashboardPage() {
               <ChevronLeft size={16} />
             </button>
             <button
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               type="button"
               disabled={page >= pageCount}
               onClick={() => setPage((current) => current + 1)}

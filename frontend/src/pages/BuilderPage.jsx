@@ -58,6 +58,7 @@ export function BuilderPage() {
         success_message: form.success_message,
         header_text: form.header_text,
         footer_text: form.footer_text,
+        allow_theme_toggle: form.allow_theme_toggle,
       });
       setForm(saved);
       setNotice(t("msg_saved"));
@@ -102,7 +103,7 @@ export function BuilderPage() {
   if (error && !form) {
     return (
       <Layout>
-        <p className="text-sm text-red-700">{error}</p>
+        <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
       </Layout>
     );
   }
@@ -110,7 +111,7 @@ export function BuilderPage() {
   if (!form) {
     return (
       <Layout>
-        <p className="text-sm text-slate-600">{t("msg_loading")}</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{t("msg_loading")}</p>
       </Layout>
     );
   }
@@ -119,14 +120,14 @@ export function BuilderPage() {
     <Layout>
       <div className="flex items-center justify-between gap-3">
         <button
-          className="text-sm font-medium text-brand-700 hover:underline"
+          className="text-sm font-medium text-brand-700 hover:underline dark:text-brand-500"
           type="button"
           onClick={() => navigate("/dashboard")}
         >
           {t("link_back_to_dashboard")}
         </button>
         <Link
-          className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+          className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
           to={`/builder/${id}/submissions`}
         >
           <ClipboardList size={16} />
@@ -135,28 +136,28 @@ export function BuilderPage() {
       </div>
 
       <form className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(380px,0.9fr)]" onSubmit={handleSave}>
-        <section className="space-y-4 rounded-md border border-slate-200 bg-white p-5 shadow-panel">
+        <section className="space-y-4 rounded-md border border-slate-200 bg-white p-5 shadow-panel dark:border-slate-800 dark:bg-slate-900">
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="space-y-1 text-sm font-medium text-slate-700">
+            <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
               {t("lbl_name")}
               <input
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                 value={form.name}
                 onChange={(event) => updateField({ name: event.target.value })}
               />
             </label>
-            <label className="space-y-1 text-sm font-medium text-slate-700">
+            <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
               {t("lbl_slug")}
               <input
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                 value={form.slug}
                 onChange={(event) => updateField({ slug: event.target.value })}
               />
             </label>
-            <label className="space-y-1 text-sm font-medium text-slate-700">
+            <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
               {t("lbl_status")}
               <select
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                 value={form.status}
                 onChange={(event) => updateField({ status: event.target.value })}
               >
@@ -167,39 +168,39 @@ export function BuilderPage() {
                 ))}
               </select>
             </label>
-            <label className="space-y-1 text-sm font-medium text-slate-700">
+            <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
               {t("lbl_success_message")}
               <input
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                 value={form.success_message}
                 onChange={(event) => updateField({ success_message: event.target.value })}
               />
             </label>
           </div>
-          <label className="block space-y-1 text-sm font-medium text-slate-700">
+          <label className="block space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
             {t("lbl_description")}
             <textarea
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
               value={form.description}
               onChange={(event) => updateField({ description: event.target.value })}
             />
           </label>
 
-          <div className="space-y-2 rounded-md border border-slate-200 p-3">
-            <span className="text-sm font-medium text-slate-700">{t("lbl_banner_image")}</span>
+          <div className="space-y-2 rounded-md border border-slate-200 p-3 dark:border-slate-800">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t("lbl_banner_image")}</span>
             <div className="flex items-center gap-3">
               {form.banner_image_url ? (
                 <img
                   src={form.banner_image_url}
                   alt=""
-                  className="h-16 w-28 rounded-md border border-slate-200 object-cover"
+                  className="h-16 w-28 rounded-md border border-slate-200 object-cover dark:border-slate-800"
                 />
               ) : null}
               <div>
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 disabled:opacity-60"
+                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                     disabled={savingBanner}
                     onClick={() => bannerInputRef.current?.click()}
                   >
@@ -208,7 +209,7 @@ export function BuilderPage() {
                   {form.banner_image_url ? (
                     <button
                       type="button"
-                      className="rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+                      className="rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-900 dark:bg-slate-900 dark:text-red-400 dark:hover:bg-red-950/40"
                       disabled={savingBanner}
                       onClick={handleBannerRemove}
                     >
@@ -223,34 +224,44 @@ export function BuilderPage() {
                   className="hidden"
                   onChange={handleBannerChange}
                 />
-                <p className="mt-1 text-xs text-slate-500">{t("hint_banner_formats")}</p>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t("hint_banner_formats")}</p>
               </div>
             </div>
-            {bannerError ? <p className="text-sm text-red-700">{bannerError}</p> : null}
+            {bannerError ? <p className="text-sm text-red-700 dark:text-red-400">{bannerError}</p> : null}
           </div>
 
-          <label className="block space-y-1 text-sm font-medium text-slate-700">
+          <label className="block space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
             {t("lbl_header_text")}
             <input
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
               value={form.header_text ?? ""}
               onChange={(event) => updateField({ header_text: event.target.value })}
             />
           </label>
 
-          <label className="block space-y-1 text-sm font-medium text-slate-700">
+          <label className="block space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
             {t("lbl_footer_text")}
             <textarea
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
               value={form.footer_text ?? ""}
               onChange={(event) => updateField({ footer_text: event.target.value })}
             />
           </label>
 
+          <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+            <input
+              className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-600 dark:border-slate-700 dark:bg-slate-950"
+              type="checkbox"
+              checked={Boolean(form.allow_theme_toggle)}
+              onChange={(event) => updateField({ allow_theme_toggle: event.target.checked })}
+            />
+            {t("lbl_allow_theme_toggle")}
+          </label>
+
           <SchemaEditor schema={form.schema} onChange={(schema) => updateField({ schema })} />
 
-          {error ? <p className="text-sm text-red-700">{error}</p> : null}
-          {notice ? <p className="text-sm text-brand-700">{notice}</p> : null}
+          {error ? <p className="text-sm text-red-700 dark:text-red-400">{error}</p> : null}
+          {notice ? <p className="text-sm text-brand-700 dark:text-brand-500">{notice}</p> : null}
 
           <button
             className="inline-flex items-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
@@ -263,16 +274,29 @@ export function BuilderPage() {
         </section>
 
         <aside className="space-y-6">
-          <section className="rounded-md border border-slate-200 bg-white p-5 shadow-panel">
-            <FormRenderer
-              title={form.name}
-              description={form.description}
-              schema={form.schema}
-              values={previewValues}
-              status="idle"
-              onChange={(name, value) => setPreviewValues((current) => ({ ...current, [name]: value }))}
-              onSubmit={(event) => event.preventDefault()}
-            />
+          <section className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-panel dark:border-slate-800 dark:bg-slate-900">
+            {form.banner_image_url ? (
+              <img src={form.banner_image_url} alt="" className="h-40 w-full object-cover" />
+            ) : null}
+            <div className="p-5">
+              {form.header_text ? (
+                <h3 className="mb-4 text-xl font-bold text-slate-950 dark:text-white">{form.header_text}</h3>
+              ) : null}
+              <FormRenderer
+                title={form.name}
+                description={form.description}
+                schema={form.schema}
+                values={previewValues}
+                status="idle"
+                onChange={(name, value) => setPreviewValues((current) => ({ ...current, [name]: value }))}
+                onSubmit={(event) => event.preventDefault()}
+              />
+              {form.footer_text ? (
+                <p className="mt-6 border-t border-slate-200 pt-4 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                  {form.footer_text}
+                </p>
+              ) : null}
+            </div>
           </section>
 
           <section className="rounded-md border border-slate-200 bg-slate-950 p-5 text-slate-100 shadow-panel">

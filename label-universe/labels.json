@@ -198,6 +198,11 @@
     "es": "Datos de la cuenta",
     "zh": "账户详情"
   },
+  "lbl_allow_theme_toggle": {
+    "en": "Let visitors switch light/dark mode",
+    "es": "Permitir que los visitantes cambien entre modo claro y oscuro",
+    "zh": "允许访客切换浅色/深色模式"
+  },
   "lbl_attachments": { "en": "Attachments", "es": "Archivos adjuntos", "zh": "附件" },
   "lbl_banner_image": {
     "en": "Banner image",
@@ -474,6 +479,16 @@
     "en": "Remove option",
     "es": "Eliminar opción",
     "zh": "移除选项"
+  },
+  "title_theme_dark": {
+    "en": "Switch to dark mode",
+    "es": "Cambiar a modo oscuro",
+    "zh": "切换到深色模式"
+  },
+  "title_theme_light": {
+    "en": "Switch to light mode",
+    "es": "Cambiar a modo claro",
+    "zh": "切换到浅色模式"
   },
   "title_your_forms": {
     "en": "Your forms",

@@ -5,12 +5,13 @@
 // that syncs the active UI language from the signed-in user's stored preference,
 // since every authenticated page renders inside this component.
 
-import { LogOut, UserRound } from "lucide-react";
+import { LogOut, Moon, Sun, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { getProfile, isAuthenticated, logout } from "../api/auth";
 import { useTranslation } from "../lib/i18n";
+import { useTheme } from "../lib/theme";
 
 /**
  * @param {object} props
@@ -22,6 +23,7 @@ export function Layout({ children }) {
   const authed = isAuthenticated();
   const [avatarUrl, setAvatarUrl] = useState(null);
   const { t, setLanguage } = useTranslation();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     if (!authed) {
@@ -44,42 +46,56 @@ export function Layout({ children }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-ink">
-      <header className="border-b border-slate-200 bg-white">
+    <div className="min-h-screen bg-slate-50 text-ink dark:bg-slate-950 dark:text-slate-100">
+      <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 lg:px-8">
-          <Link to={authed ? "/dashboard" : "/"} className="text-sm font-semibold uppercase tracking-wide text-brand-700">
+          <Link
+            to={authed ? "/dashboard" : "/"}
+            className="text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-500"
+          >
             {t("nav_brand")}
           </Link>
-          {authed ? (
-            <div className="flex items-center gap-2">
-              <Link
-                to="/profile"
-                className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="" className="h-4 w-4 rounded-full object-cover" />
-                ) : (
-                  <UserRound size={16} />
-                )}
-                {t("nav_profile")}
-              </Link>
-              <button
-                className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                type="button"
-                onClick={handleLogout}
-              >
-                <LogOut size={16} />
-                {t("nav_logout")}
-              </button>
-            </div>
-          ) : (
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          <div className="flex items-center gap-2">
+            <button
+              className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white p-2 text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+              type="button"
+              onClick={toggleTheme}
+              title={theme === "dark" ? t("title_theme_light") : t("title_theme_dark")}
+              aria-label={theme === "dark" ? t("title_theme_light") : t("title_theme_dark")}
             >
-              {t("nav_login")}
-            </Link>
-          )}
+              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+            {authed ? (
+              <>
+                <Link
+                  to="/profile"
+                  className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="" className="h-4 w-4 rounded-full object-cover" />
+                  ) : (
+                    <UserRound size={16} />
+                  )}
+                  {t("nav_profile")}
+                </Link>
+                <button
+                  className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                  type="button"
+                  onClick={handleLogout}
+                >
+                  <LogOut size={16} />
+                  {t("nav_logout")}
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                {t("nav_login")}
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 

@@ -56,20 +56,22 @@ export function ConfirmDialog({
       role="presentation"
     >
       <div
-        className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl"
+        className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl dark:bg-slate-900"
         onClick={(event) => event.stopPropagation()}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
       >
-        <h2 id="confirm-dialog-title" className="text-lg font-semibold text-slate-950">
+        <h2 id="confirm-dialog-title" className="text-lg font-semibold text-slate-950 dark:text-white">
           {title}
         </h2>
-        {description ? <p className="mt-2 text-sm text-slate-600">{description}</p> : null}
+        {description ? (
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{description}</p>
+        ) : null}
 
         <div className="mt-6 flex justify-end gap-2">
           <button
-            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
             type="button"
             onClick={onCancel}
           >

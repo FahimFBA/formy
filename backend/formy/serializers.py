@@ -52,6 +52,7 @@ class FormSerializer(serializers.ModelSerializer):
             "banner_image_url",
             "header_text",
             "footer_text",
+            "allow_theme_toggle",
             "created_at",
             "updated_at",
         ]
@@ -95,6 +96,7 @@ class PublicFormSerializer(serializers.ModelSerializer):
             "banner_image_url",
             "header_text",
             "footer_text",
+            "allow_theme_toggle",
         ]
 
     def get_banner_image_url(self, form):

@@ -11,7 +11,8 @@ The `backend/formy` package owns the domain model:
 
 - `Form` stores the portable JSON schema, publication state, an `owner` (nullable FK to
   `AUTH_USER_MODEL`, so the app works whether or not the host project assigns owners), and optional
-  public-page presentation: `banner_image`, `header_text`, `footer_text`.
+  public-page presentation: `banner_image`, `header_text`, `footer_text`,
+  `allow_theme_toggle`.
 - `FormSubmission` stores normalized submission payloads and the schema version that was live when
   the submission was made.
 - `SubmissionAttachment` stores a file uploaded against one of a submission's `"file"`-type schema
@@ -94,7 +95,8 @@ The `frontend/src` app is schema-driven and router-based:
   upload/removal, header/footer text), `SubmissionsPage` (with CSV/JSON/PDF export and per-submission
   attachment download buttons), `ProfilePage` (account details, password change, avatar upload),
   `PublicFormPage` (`/f/:slug`, anonymous; renders the form's banner image, header text, and footer
-  text around `FormRenderer` when set).
+  text around `FormRenderer` when set, plus its own light/dark toggle when the form's
+  `allow_theme_toggle` is set).
 - `components/ConfirmDialog.jsx` is a small reusable modal (backdrop click, Escape key, and a
   Cancel button all dismiss it) used anywhere a destructive action needs confirmation, currently
   form deletion.
@@ -108,6 +110,14 @@ The `frontend/src` app is schema-driven and router-based:
   before the profile request resolves, and `ProfilePage` lets the user change it, persisted through
   `PATCH /api/auth/profile/`. Every UI string in the authenticated app goes through `t()` rather
   than being hardcoded; see `label-universe/README.md` for the registry itself.
+- `lib/theme.jsx` provides `ThemeProvider` (wraps the whole app in `main.jsx`, outside
+  `LanguageProvider`) and a `useTheme()` hook (`theme`, `toggleTheme`). Unlike the language
+  preference, the theme is cached per device in `localStorage`, not tied to the signed-in
+  account, and defaults to the OS `prefers-color-scheme` on first visit. `index.html` applies the
+  stored choice to `<html class="dark">` before React mounts (avoiding a flash of the wrong
+  theme); Tailwind's `darkMode: "class"` then drives every `dark:` variant. `Layout` renders the
+  toggle for authenticated pages, and `PublicFormPage` renders its own copy when the form's
+  `allow_theme_toggle` is set.
 
 `FormRenderer` stays reusable on its own (embedded widgets or a future standalone package), since it
 only depends on a schema plus values/callbacks, not on routing or auth state. Both it and the

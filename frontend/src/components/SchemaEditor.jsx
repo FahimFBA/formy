@@ -89,11 +89,11 @@ export function SchemaEditor({ schema, onChange }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-slate-950">{t("lbl_schema")}</h2>
-          <p className="mt-1 text-sm text-slate-600">{t("desc_builder")}</p>
+          <h2 className="text-xl font-semibold text-slate-950 dark:text-white">{t("lbl_schema")}</h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{t("desc_builder")}</p>
         </div>
         <button
-          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
           type="button"
           onClick={addField}
         >
@@ -106,8 +106,10 @@ export function SchemaEditor({ schema, onChange }) {
         {fields.map((field, index) => (
           <section
             key={index}
-            className={`rounded-md border bg-white p-4 transition ${
-              dropIndex === index ? "border-brand-500 ring-2 ring-brand-100" : "border-slate-200"
+            className={`rounded-md border bg-white p-4 transition dark:bg-slate-900 ${
+              dropIndex === index
+                ? "border-brand-500 ring-2 ring-brand-100 dark:ring-brand-500/20"
+                : "border-slate-200 dark:border-slate-800"
             }`}
             onDragOver={(event) => {
               event.preventDefault();
@@ -128,30 +130,30 @@ export function SchemaEditor({ schema, onChange }) {
                   setDragIndex(null);
                   setDropIndex(null);
                 }}
-                className="cursor-grab touch-none rounded-md border border-slate-200 p-1 text-slate-500 hover:bg-slate-50 active:cursor-grabbing"
+                className="cursor-grab touch-none rounded-md border border-slate-200 p-1 text-slate-500 hover:bg-slate-50 active:cursor-grabbing dark:border-slate-700 dark:hover:bg-slate-800"
                 title={t("title_drag_reorder")}
                 aria-label={t("title_drag_reorder")}
               >
                 <GripVertical size={16} />
               </button>
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 {t("lbl_field_n", { n: index + 1 })}
               </span>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="space-y-1 text-sm font-medium text-slate-700">
+              <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
                 {t("lbl_label")}
                 <input
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                   value={field.label}
                   onChange={(event) => updateField(index, { label: event.target.value })}
                 />
               </label>
-              <label className="space-y-1 text-sm font-medium text-slate-700">
+              <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
                 {t("lbl_type")}
                 <select
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                   value={field.type}
                   onChange={(event) => updateField(index, { type: event.target.value })}
                 >
@@ -162,18 +164,18 @@ export function SchemaEditor({ schema, onChange }) {
                   ))}
                 </select>
               </label>
-              <label className="space-y-1 text-sm font-medium text-slate-700">
+              <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
                 {t("lbl_name")}
                 <input
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                   value={field.name}
                   onChange={(event) => updateField(index, { name: event.target.value })}
                 />
               </label>
-              <label className="space-y-1 text-sm font-medium text-slate-700">
+              <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
                 {t("lbl_placeholder")}
                 <input
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                   value={field.placeholder ?? ""}
                   onChange={(event) => updateField(index, { placeholder: event.target.value })}
                 />
@@ -182,11 +184,11 @@ export function SchemaEditor({ schema, onChange }) {
 
             {field.type === "select" || field.type === "multi_select" ? (
               <div className="mt-3 space-y-2">
-                <span className="block text-sm font-medium text-slate-700">{t("lbl_options")}</span>
+                <span className="block text-sm font-medium text-slate-700 dark:text-slate-300">{t("lbl_options")}</span>
                 {(field.options ?? []).map((option, optionIndex) => (
                   <div key={optionIndex} className="flex items-center gap-2">
                     <input
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                       value={option}
                       onChange={(event) => {
                         const nextOptions = [...(field.options ?? [])];
@@ -196,7 +198,7 @@ export function SchemaEditor({ schema, onChange }) {
                     />
                     <button
                       type="button"
-                      className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-md border border-red-200 text-red-700 transition hover:bg-red-50"
+                      className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-md border border-red-200 text-red-700 transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
                       title={t("title_remove_option")}
                       onClick={() =>
                         updateField(index, {
@@ -210,7 +212,7 @@ export function SchemaEditor({ schema, onChange }) {
                 ))}
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                  className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                   onClick={() => updateField(index, { options: [...(field.options ?? []), ""] })}
                 >
                   <Plus size={14} />
@@ -221,19 +223,19 @@ export function SchemaEditor({ schema, onChange }) {
 
             {field.type === "file" ? (
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <label className="space-y-1 text-sm font-medium text-slate-700">
+                <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
                   {t("lbl_accepted_file_types")}
                   <input
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                     placeholder=".pdf, .docx, .png"
                     value={field.accept ?? ""}
                     onChange={(event) => updateField(index, { accept: event.target.value })}
                   />
                 </label>
-                <label className="space-y-1 text-sm font-medium text-slate-700">
+                <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
                   {t("lbl_max_files")}
                   <input
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                     type="number"
                     min={1}
                     value={field.max_files ?? 1}
@@ -246,9 +248,9 @@ export function SchemaEditor({ schema, onChange }) {
             ) : null}
 
             <div className="mt-4 flex items-center justify-between gap-3">
-              <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+              <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
                 <input
-                  className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-600"
+                  className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-600 dark:border-slate-700 dark:bg-slate-950"
                   type="checkbox"
                   checked={Boolean(field.required)}
                   onChange={(event) => updateField(index, { required: event.target.checked })}
@@ -256,7 +258,7 @@ export function SchemaEditor({ schema, onChange }) {
                 {t("lbl_required")}
               </label>
               <button
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-red-200 text-red-700 transition hover:bg-red-50"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-red-200 text-red-700 transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
                 type="button"
                 title={t("title_remove_field")}
                 onClick={() => removeField(index)}

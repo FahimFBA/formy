@@ -12,6 +12,27 @@ See `AGENTS.md` for the exact steps.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-29
+
+### Added
+
+- Dark theme: a header toggle (`Layout`) switches the whole app between light and dark,
+  backed by `ThemeProvider`/`useTheme` (`frontend/src/lib/theme.jsx`). The choice is
+  cached per device in `localStorage` (separate from the account-level language
+  preference) and falls back to the OS `prefers-color-scheme` on first visit. An inline
+  script in `index.html` applies the stored choice before React mounts so there is no
+  flash of the wrong theme.
+- `Form.allow_theme_toggle`: a per-form setting, edited from `BuilderPage` alongside the
+  banner/header/footer fields, that controls whether a published form's public page
+  (`PublicFormPage`) shows its own light/dark toggle to anonymous visitors.
+
+### Fixed
+
+- `BuilderPage`'s live preview now renders the form's banner image, header text, and
+  footer text around the schema preview, matching what `PublicFormPage` actually shows;
+  previously the preview only rendered the bare field list, so banner and header/footer
+  changes were invisible until publishing.
+
 ## [0.4.0] - 2026-07-12
 
 ### Added
@@ -109,7 +130,8 @@ See `AGENTS.md` for the exact steps.
 - CI on every pull request: Python lint (ruff), Django test suite, JS lint (eslint), and frontend
   build checks.
 
-[Unreleased]: https://github.com/FahimFBA/formy/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/FahimFBA/formy/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/FahimFBA/formy/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/FahimFBA/formy/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/FahimFBA/formy/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/FahimFBA/formy/compare/v0.1.0...v0.2.0

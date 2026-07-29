@@ -21,7 +21,7 @@ import { useTranslation } from "../lib/i18n";
 function Field({ field, value, onChange }) {
   const { t, language } = useTranslation();
   const baseClass =
-    "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100";
+    "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-brand-500/20";
 
   if (field.type === "textarea") {
     return (
@@ -59,7 +59,7 @@ function Field({ field, value, onChange }) {
 
   if (field.type === "checkbox") {
     return (
-      <label className="flex items-center gap-3 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm">
+      <label className="flex items-center gap-3 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
         <input
           className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-600"
           id={field.name}
@@ -80,10 +80,10 @@ function Field({ field, value, onChange }) {
         {(field.options ?? []).map((option) => (
           <label
             key={option}
-            className="flex items-center gap-3 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+            className="flex items-center gap-3 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
           >
             <input
-              className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-600"
+              className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-600 dark:border-slate-700 dark:bg-slate-950"
               type="checkbox"
               checked={selected.includes(option)}
               onChange={(event) =>
@@ -153,14 +153,14 @@ function Field({ field, value, onChange }) {
         {selectedFiles.map((file, index) => (
           <div
             key={`${file.name}-${index}`}
-            className="flex items-center justify-between gap-2 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+            className="flex items-center justify-between gap-2 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
           >
             <span className="flex min-w-0 items-center gap-2">
-              <Paperclip className="shrink-0 text-slate-400" size={16} />
+              <Paperclip className="shrink-0 text-slate-400 dark:text-slate-500" size={16} />
               <span className="truncate">{file.name}</span>
             </span>
             <button
-              className="shrink-0 rounded p-1 text-slate-400 transition hover:bg-slate-200 hover:text-red-600"
+              className="shrink-0 rounded p-1 text-slate-400 transition hover:bg-slate-200 hover:text-red-600 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-red-400"
               aria-label={t("btn_remove")}
               type="button"
               onClick={() => removeFile(index)}
@@ -172,7 +172,7 @@ function Field({ field, value, onChange }) {
 
         {canAddMore ? (
           <label
-            className="flex cursor-pointer flex-col items-center gap-1 rounded-md border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:border-brand-500 hover:bg-brand-50"
+            className="flex cursor-pointer flex-col items-center gap-1 rounded-md border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:border-brand-500 hover:bg-brand-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-brand-500 dark:hover:bg-brand-500/10"
             htmlFor={field.name}
             onDragOver={(event) => event.preventDefault()}
             onDrop={(event) => {
@@ -180,9 +180,11 @@ function Field({ field, value, onChange }) {
               addFiles(event.dataTransfer.files);
             }}
           >
-            <UploadCloud className="text-slate-400" size={24} />
-            <span className="text-sm font-semibold text-slate-700">{t("btn_choose_file")}</span>
-            <span className="text-xs text-slate-500">{field.placeholder || t("hint_file_dropzone")}</span>
+            <UploadCloud className="text-slate-400 dark:text-slate-500" size={24} />
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t("btn_choose_file")}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              {field.placeholder || t("hint_file_dropzone")}
+            </span>
             <input
               className="hidden"
               id={field.name}
@@ -233,13 +235,15 @@ export function FormRenderer({ title, description, schema, values, onChange, onS
   return (
     <form className="space-y-5" onSubmit={onSubmit}>
       <div>
-        <h2 className="text-xl font-semibold text-slate-950">{title}</h2>
-        {description ? <p className="mt-1 text-sm text-slate-600">{description}</p> : null}
+        <h2 className="text-xl font-semibold text-slate-950 dark:text-white">{title}</h2>
+        {description ? (
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{description}</p>
+        ) : null}
       </div>
 
       {(schema.fields ?? []).map((field) => (
         <div key={field.name} className="space-y-2">
-          <label className="block text-sm font-medium text-slate-800" htmlFor={field.name}>
+          <label className="block text-sm font-medium text-slate-800 dark:text-slate-200" htmlFor={field.name}>
             {field.label}
             {field.required ? <span className="text-accent"> *</span> : null}
           </label>

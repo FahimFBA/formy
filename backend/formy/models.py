@@ -18,8 +18,9 @@ from django.utils import timezone
 class Form(models.Model):
     """
     A form definition: its schema, publication status, ownership, and optional public
-    page presentation (banner image, header text, footer text). owner is nullable so
-    the app works whether or not the host project assigns forms to a user.
+    page presentation (banner image, header text, footer text, whether visitors may
+    toggle light/dark mode). owner is nullable so the app works whether or not the
+    host project assigns forms to a user.
     """
 
     class Status(models.TextChoices):
@@ -45,6 +46,7 @@ class Form(models.Model):
     banner_image = models.ImageField(upload_to="form_banners/", blank=True, null=True)
     header_text = models.CharField(max_length=200, blank=True)
     footer_text = models.TextField(blank=True)
+    allow_theme_toggle = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

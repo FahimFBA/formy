@@ -44,19 +44,19 @@ export function LoginPage() {
 
   return (
     <Layout>
-      <div className="mx-auto max-w-sm rounded-md border border-slate-200 bg-white p-6 shadow-panel">
-        <h1 className="text-xl font-semibold text-slate-950">
+      <div className="mx-auto max-w-sm rounded-md border border-slate-200 bg-white p-6 shadow-panel dark:border-slate-800 dark:bg-slate-900">
+        <h1 className="text-xl font-semibold text-slate-950 dark:text-white">
           {mode === "login" ? t("lbl_login_heading") : t("lbl_register_heading")}
         </h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
           {mode === "login" ? t("desc_login") : t("desc_register")}
         </p>
 
         <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
-          <label className="block space-y-1 text-sm font-medium text-slate-700">
+          <label className="block space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
             {t("lbl_username")}
             <input
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
               required
@@ -64,29 +64,29 @@ export function LoginPage() {
           </label>
 
           {mode === "register" ? (
-            <label className="block space-y-1 text-sm font-medium text-slate-700">
+            <label className="block space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
               {t("lbl_email")}
               <input
                 type="email"
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
               />
             </label>
           ) : null}
 
-          <label className="block space-y-1 text-sm font-medium text-slate-700">
+          <label className="block space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
             {t("lbl_password")}
             <input
               type="password"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               required
             />
           </label>
 
-          {error ? <p className="text-sm text-red-700">{error}</p> : null}
+          {error ? <p className="text-sm text-red-700 dark:text-red-400">{error}</p> : null}
 
           <button
             className="inline-flex w-full items-center justify-center rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
@@ -98,7 +98,7 @@ export function LoginPage() {
         </form>
 
         <button
-          className="mt-4 text-sm font-medium text-brand-700 hover:underline"
+          className="mt-4 text-sm font-medium text-brand-700 hover:underline dark:text-brand-500"
           type="button"
           onClick={() => setMode(mode === "login" ? "register" : "login")}
         >

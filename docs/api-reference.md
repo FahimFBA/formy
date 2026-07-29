@@ -120,6 +120,7 @@ Form object:
   "banner_image_url": null,
   "header_text": "",
   "footer_text": "",
+  "allow_theme_toggle": false,
   "created_at": "2026-07-10T12:00:00Z",
   "updated_at": "2026-07-10T12:00:00Z"
 }
@@ -130,13 +131,14 @@ the public endpoints below. `schema_version`, `banner_image_url`, `created_at`, 
 `id` are read only. `banner_image_url` is set/cleared through `POST`/`DELETE
 /api/forms/<id>/banner/` below, not through this object directly. `header_text` (optional heading
 shown above the form on the public page) and `footer_text` (optional text shown below the submit
-button) are plain writable fields.
+button) are plain writable fields. `allow_theme_toggle` (default `false`) controls whether the
+public form page shows a light/dark toggle to anonymous visitors.
 
 ### `POST /api/forms/`
 
 Create a form. Send `name`, `slug`, `schema`, and optionally `description`, `status`,
-`success_message`, `header_text`, `footer_text`. `schema` is validated server side, see "Form
-schema" below.
+`success_message`, `header_text`, `footer_text`, `allow_theme_toggle`. `schema` is validated server
+side, see "Form schema" below.
 
 ### `GET /api/forms/<id>/`
 
@@ -228,7 +230,8 @@ Returns the form's schema for rendering:
   "success_message": "Thanks. Your response was submitted.",
   "banner_image_url": null,
   "header_text": "",
-  "footer_text": ""
+  "footer_text": "",
+  "allow_theme_toggle": false
 }
 ```
 
